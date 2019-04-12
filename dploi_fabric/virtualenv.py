@@ -1,24 +1,24 @@
-from fabric.api import task
-from fabric.operations import run as do_run
+from fabric import task
 
 from .utils import config
 
 
 @task
-def update():
+def update(c):
     """
     updates a virtualenv (pip install requirements.txt)
     """
-    do_run('cd %(path)s; bin/pip install -r requirements.txt --upgrade --no-deps' % config.sites["main"].deployment)
+    c.run('cd %(path)s; bin/pip install -r requirements.txt --upgrade --no-deps' % config.sites(c)["main"].deployment)
+
 
 @task
-def create():
+def create(c):
     """
     creates a virtualenv and calls update
     """
-    do_run('cd %(path)s; virtualenv . --system-site-packages --setuptools' % config.sites["main"].deployment)
-    update()
+    c.run('cd %(path)s; virtualenv . --system-site-packages --setuptools' % config.sites["main"].deployment)
+    update(c)
     # this is ugly. I know. But it seems that on first run, pip does not
     # install the correct version of packages that are pulled directly from
     # git. Only the second time around it uses the correct one.
-    update()
+    update(c)
