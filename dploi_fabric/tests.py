@@ -1,7 +1,14 @@
-import ConfigParser
-import StringIO
+try:
+    import ConfigParser
+    import StringIO
+except ImportError:
+    import configparser as ConfigParser
+    import io as StringIO
+
 import unittest
-from dploi_fabric.utils import EnvConfigParser, Configuration, _AttributeDict, STATIC_COLLECTED
+
+from dploi_fabric.utils import Configuration, EnvConfigParser, STATIC_COLLECTED
+
 
 class TestConfigurationTestCase(unittest.TestCase):
     test_config = """
@@ -19,6 +26,7 @@ cmd = bin/django
 /static/ = %(static_collected)s
 
 """
+
     def setUp(self):
         self.env_dict = {
             'host_string': 'some.server.tld',
@@ -59,11 +67,12 @@ enabled=true""", self.env_dict)
         self.assertEqual(config.get("celery").get("concurrency"), 32)
         self.assertEqual(config.get("celery").get("maxtasksperchild"), 500)
         self.assertTrue("%s_%s_celeryd" % (config.deployment.get("user"), "main") in config.get("processes"))
-        self.assertIn("celeryd  -E -B -c 32 --maxtasksperchild 500", config.get("processes").get("%s_%s_celeryd" % (config.deployment.get("user"), "main")).get("command"))
+        self.assertIn("celeryd  -E -B -c 32 --maxtasksperchild 500",
+                      config.get("processes").get("%s_%s_celeryd" % (config.deployment.get("user"), "main")).get(
+                          "command"))
 
     def test_static(self):
         self.assertEqual(self.sites["main"].get("static").get("/static/"), STATIC_COLLECTED)
-
 
 
 class TestInheritConfigParserRead(unittest.TestCase):
@@ -85,6 +94,7 @@ threshold = 0.9
 [other:dev]
 foo = bar
 """
+
     def setUp(self):
         f = StringIO.StringIO(self.test_config)
         self.config = EnvConfigParser()
@@ -106,23 +116,23 @@ foo = bar
         self.assertEquals(self.config.get('base', 'name', env='dev'), 'test')
 
     def test_overriden_value(self):
-        self.assertEquals(self.config.get('base', 'type',), 'nginx')
+        self.assertEquals(self.config.get('base', 'type', ), 'nginx')
         self.assertEquals(self.config.get('base', 'type', env='dev'), 'apache')
 
     def test_correct_exception_on_no_base(self):
         self.assertRaises(ConfigParser.NoOptionError, lambda: self.config.get('other', 'baz', env='dev'))
 
     def test_int(self):
-        self.assertEquals(self.config.getint('base', 'count',), 5)
+        self.assertEquals(self.config.getint('base', 'count', ), 5)
         self.assertEquals(self.config.getint('base', 'count', env='dev'), 1)
 
     def test_float(self):
-        self.assertEquals(self.config.getfloat('base', 'threshold',), 1.0)
+        self.assertEquals(self.config.getfloat('base', 'threshold', ), 1.0)
         self.assertEquals(self.config.getfloat('base', 'threshold', env='dev'), 0.9)
 
     def test_bool(self):
-        self.assertFalse(self.config.getboolean('base', 'enable',))
-        self.assertEqual(type(self.config.getboolean('base', 'enable',)), bool)
+        self.assertFalse(self.config.getboolean('base', 'enable', ))
+        self.assertEqual(type(self.config.getboolean('base', 'enable', )), bool)
         self.assertTrue(self.config.getboolean('base', 'enable', env='dev'))
 
     def test_has_section(self):

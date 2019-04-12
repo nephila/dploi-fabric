@@ -1,6 +1,8 @@
-from fabric.operations import run as do_run
 from fabric.api import task
+from fabric.operations import run as do_run
+
 from .utils import config
+
 
 @task
 def update():

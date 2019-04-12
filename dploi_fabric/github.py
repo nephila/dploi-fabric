@@ -1,13 +1,16 @@
-import os
+try:
+    import StringIO
+except ImportError:
+    import io as StringIO
 
-from fabric.api import env, task, prompt, run, get
-from fabric.contrib import files
 import getpass
 import json
-import urllib2
 import subprocess
-import StringIO
+
 import requests
+from fabric.api import env, get, prompt, run, task
+from fabric.contrib import files
+
 
 @task
 def upload_ssh_deploy_key():
@@ -19,11 +22,12 @@ def upload_ssh_deploy_key():
     output = StringIO.StringIO()
     get("/home/%(user)s/.ssh/id_rsa.pub" % env, output)
     output.seek(0)
-    
+
     ssh_key = output.read()
 
     logged_in = False
     headers = {}
+    response = None
     while not logged_in:
         try:
             default_username = subprocess.check_output(["git", "config", "--get", "github.user"]).strip()
@@ -36,16 +40,18 @@ def upload_ssh_deploy_key():
         response = requests.get("https://api.github.com/repos/%s/keys" % repository, auth=(username, password))
         if response.status_code == 401 and response.headers.get('X-GitHub-OTP', '').startswith('required'):
             headers['X-GitHub-OTP'] = prompt('Please enter the Two-Factor-Auth code:')
-            response = requests.get("https://api.github.com/repos/%s/keys" % repository, auth=(username, password), headers=headers)
+            response = requests.get("https://api.github.com/repos/%s/keys" % repository, auth=(username, password),
+                                    headers=headers)
         response = json.loads(response.content)
 
         if 'message' in response:
             print(response['message'])
         else:
             logged_in = True
-    
+
     match = [x for x in response if x.get("key") in ssh_key]
     if not match:
         data = {'key': ssh_key}
         data = json.dumps(data)
-        response = requests.post("https://api.github.com/repos/%s/keys" % repository, auth=(username, password), data=data, headers=headers)
+        response = requests.post("https://api.github.com/repos/%s/keys" % repository, auth=(username, password),
+                                 data=data, headers=headers)

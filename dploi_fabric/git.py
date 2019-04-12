@@ -1,37 +1,34 @@
-from fabric.operations import run, prompt
-from fabric.api import task, env, get, put, local
-from fabric.contrib.files import exists
-import ConfigParser
-import StringIO
 import posixpath
-from .utils import STATIC_COLLECTED, DATA_DIRECTORY
-from django_utils import django_settings_file, append_settings
-import os
+
+from fabric.api import env, local, task
+from fabric.contrib.files import exists
+from fabric.operations import prompt, run
+
+from django_utils import append_settings
 from .messages import CAUTION
-from .utils import config
 
 
 @task
 def update():
     test = run("cd %(path)s; git --no-pager diff --stat" % env)
     if "files changed" in test:
-        print CAUTION
-        print "You have local file changes to the git repository on the server. Run 'fab %s git.reset' to remove them, " \
-              "or keep them by applying the diff locally with the command 'git apply filename.diff' and upload it to your git host" % env.identifier
-        print
-        print "You now have the following options:"
-        print
-        print "[D]ownload diff"
-        print "Continue and [R]eset changes"
-        print "[E]xit"
+        print(CAUTION)
+        print("You have local file changes to the git repository on the server. Run 'fab %s git.reset' to remove them, " \
+              "or keep them by applying the diff locally with the command 'git apply filename.diff' and upload it to your git host" % env.identifier)
+        print()
+        print("You now have the following options:")
+        print()
+        print("[D]ownload diff")
+        print("Continue and [R]eset changes")
+        print("[E]xit")
         download_diff = prompt("What do you want to do?", default="D")
         if download_diff.lower() == "d":
             diff = run(("cd %(path)s; git diff --color .") % env)
             for i in range(1, 50):
-                print
-            print diff
+                print()
+            print(diff)
             for i in range(1, 5):
-                print
+                print()
             exit()
         elif download_diff.lower() == "e":
             exit()
@@ -72,7 +69,9 @@ def incoming(remote='origin', branch=None):
     """
     if not branch:
         branch = env.branch
-    run(("cd %(path)s; git fetch " + remote + " && git log --oneline --pretty=format:'%%C(yellow)%%h%%C(reset) - %%s %%C(bold blue)<%%an>%%C(reset)' .." + remote + '/' + branch) % env)
+    run(("cd %(path)s; git fetch " + remote +
+         " && git log --oneline --pretty=format:'%%C(yellow)%%h%%C(reset) - %%s %%C(bold blue)<%%an>%%C(reset)' .." +
+         remote + '/' + branch) % env)
 
 
 def local_branch_is_dirty(ignore_untracked_files=True):

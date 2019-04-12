@@ -1,10 +1,16 @@
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    import io as StringIO
+
+import posixpath
 from copy import copy
+
+from fabric.api import env, run
 from fabric.decorators import task
-from fabric.api import run, put, env
+
 from dploi_fabric.toolbox.template import render_template
 from dploi_fabric.utils import config, safe_put
-import posixpath
 
 
 @task
@@ -100,10 +106,10 @@ def update_config_file(dryrun=False, update_command=update, load_config=True):
     supervisord_conf_output = render_template(daemon_template_path, copy(site_config))
 
     if dryrun:
-        print path + ':'
-        print output
-        print daemon_template_path + ':'
-        print supervisord_conf_output
+        print(path + ':')
+        print(output)
+        print(daemon_template_path + ':')
+        print(supervisord_conf_output)
     else:
         safe_put(StringIO.StringIO(output), path)
         safe_put(StringIO.StringIO(supervisord_conf_output), supervisord_conf_path)

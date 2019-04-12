@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-import ConfigParser
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
+
 
 class EnvConfigParser(ConfigParser.SafeConfigParser):
     """ A config parser that can handle "namespaced" sections. Example:
@@ -29,7 +33,7 @@ class EnvConfigParser(ConfigParser.SafeConfigParser):
                 pass
         if not items:
             raise ConfigParser.NoSectionError(self._concat(section, env) if env else section)
-        return tuple(items.iteritems())
+        return tuple(items.items())
 
     def get(self, section, option, raw=False, vars=None, env=None):
         if env and self.has_section(self._concat(section, env)):
@@ -52,16 +56,16 @@ class EnvConfigParser(ConfigParser.SafeConfigParser):
     def getboolean(self, section, option, env=None):
         v = self.get(section, option, env=env)
         if v.lower() not in self._boolean_states:
-            raise ValueError, 'Not a boolean: %s' % v
+            raise (ValueError, 'Not a boolean: %s' % v)
         return self._boolean_states[v.lower()]
 
     def has_section(self, section, env=None, strict=False):
         if not env:
-            return ConfigParser.SafeConfigParser.has_section(self,section)
+            return ConfigParser.SafeConfigParser.has_section(self, section)
         return (
-            (not strict and ConfigParser.SafeConfigParser.has_section(self, section)) or
-            ConfigParser.SafeConfigParser.has_section(self, self._concat(section, env))
-            )
+                (not strict and ConfigParser.SafeConfigParser.has_section(self, section)) or
+                ConfigParser.SafeConfigParser.has_section(self, self._concat(section, env))
+        )
 
     def section_namespaces(self, section):
         namespaces = []

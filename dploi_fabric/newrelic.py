@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-import sys
 import subprocess
+import sys
 from functools import wraps
 
-from fabric.api import task, env, prompt
+from fabric.api import env, prompt
 from fabric.operations import run
 
 from toolbox import logger

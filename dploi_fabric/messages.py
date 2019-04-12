@@ -35,10 +35,6 @@ Y8b  d8 88   88 88b  d88    88      .88.   `8b  d8' 88  V888 db
 ===============================================================
 """
 
-
-
-
-
 DOMAIN_DICT_DEPRECATION_WARNING = DEPRECATED + """
  - Please use a dict to describe domains in deployments.py , e.g.
 
