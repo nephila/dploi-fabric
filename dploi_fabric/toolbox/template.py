@@ -7,7 +7,8 @@ from django.template.context import Context
 
 import dploi_fabric
 
-settings.configure(DEBUG=True, TEMPLATE_DEBUG=True)
+if not settings.configured:
+    settings.configure(DEBUG=True)
 
 
 def render_template(path, context, strip_newlines=False):
