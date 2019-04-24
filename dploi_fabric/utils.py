@@ -1,3 +1,6 @@
+from fabric import task
+from patchwork.files import exists
+
 try:
     import StringIO
 except ImportError:
@@ -6,17 +9,46 @@ except ImportError:
 import os
 import posixpath
 
-from fabric.api import env, get, task
-from fabric.contrib.files import exists
-from fabric.operations import local, put, run
-from fabric.state import _AttributeDict
-
 from dploi_fabric.toolbox.template import app_package_path, render_template
 from .messages import DOMAIN_DICT_DEPRECATION_WARNING
 from .toolbox.datastructures import EnvConfigParser
 
 STATIC_COLLECTED = "../static/"
 DATA_DIRECTORY = "../upload/"
+
+
+class _AttributeDict(dict):
+    """
+    Dictionary subclass enabling attribute lookup/assignment of keys/values.
+    For example::
+        >>> m = _AttributeDict({'foo': 'bar'})
+        >>> m.foo
+        'bar'
+        >>> m.foo = 'not bar'
+        >>> m['foo']
+        'not bar'
+    ``_AttributeDict`` objects also provide ``.first()`` which acts like
+    ``.get()`` but accepts multiple keys as arguments, and returns the value of
+    the first hit, e.g.::
+        >>> m = _AttributeDict({'foo': 'bar', 'biz': 'baz'})
+        >>> m.first('wrong', 'incorrect', 'foo', 'biz')
+        'bar'
+    """
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            # to conform with __getattr__ spec
+            raise AttributeError(key)
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def first(self, *names):
+        for name in names:
+            value = self.get(name)
+            if value:
+                return value
 
 
 class Configuration(object):
@@ -103,19 +135,20 @@ class Configuration(object):
         'logdir': None,
     }
 
-    def load_sites(self, config_file_content=None, env_dict=None):
+    def load_sites(self, c, config_file_content=None, env_dict=None):
         """
         Called from self.sites and returns a dictionary with the different sites
         and their individual settings.
         """
+        env = c.config
         if not config_file_content:
             if env.get("use_local_config_ini", False):
                 output = open("config.ini")
             else:
-                config_file = os.path.join(env.path, "config.ini")
-                if exists(config_file):
+                config_file = os.path.join(env['path'], "config.ini")
+                if exists(c, config_file):
                     output = StringIO.StringIO()
-                    get(u"%s" % config_file, output)
+                    c.get(u"%s" % config_file, output)
                     output.seek(0)
                 else:
                     raise Exception("Missing config.ini, tried path %s" % config_file)
@@ -152,7 +185,7 @@ class Configuration(object):
                     continue
 
                 if self.defaults.get(section) is None:
-                    print "Caution: Section %s is not supported, skipped" % section
+                    print("Caution: Section %s is not supported, skipped" % section)
                     continue
                 for option, default_value in config.items(section, env=site):
                     setting = self.defaults.get(section).get(option)
@@ -165,8 +198,8 @@ class Configuration(object):
                     else:
                         value = config.get(section, option, env=site) % variables
                     attr_dict[section][option] = value
-            self.sites[site] = _AttributeDict(attr_dict)
-            attr_dict.update(self.deployment(site, env_dict))
+            self.sites(c)[site] = _AttributeDict(attr_dict)
+            attr_dict.update(self.deployment(c, site, env_dict))
             if attr_dict.get("checkout").get("tool") == "buildout":
                 # e.g. bin/django -> /home/username/app/bin/django
                 attr_dict["django"]["cmd"] = posixpath.join(
@@ -194,8 +227,8 @@ class Configuration(object):
                     attr_dict.get("deployment").get("path"),
                     "bin/newrelic-admin"
                 ) + " run-program " + attr_dict["django"]["cmd"]
-            attr_dict.update({'processes': self.processes(site, env_dict)})
-            attr_dict['environment'] = self.environment(site, env_dict)
+            attr_dict.update({'processes': self.processes(c, site, env_dict)})
+            attr_dict['environment'] = self.environment(c, site, env_dict)
             attr_dict['environment'].setdefault('DEPLOYMENT_SITE', site)
             if attr_dict['deployment']['django_settings_module']:
                 attr_dict['environment']['DJANGO_SETTINGS_MODULE'] = attr_dict['deployment']['django_settings_module']
@@ -212,13 +245,12 @@ class Configuration(object):
         vars = " ".join([u'%s=%s' % (key, value) for key, value in environment.items()])
         return u"export %s;" % vars
 
-    @property
-    def sites(self):
+    def sites(self, c):
         if getattr(self, "_sites", False) is False:
-            self.load_sites()
+            self.load_sites(c)
         return self._sites
 
-    def processes(self, site, env_dict):
+    def processes(self, c, site, env_dict):
         """
         Returns a dictionary of dictionaries each having the following keys:
 
@@ -232,7 +264,7 @@ class Configuration(object):
             gunicorn/memcached/celeryd
         """
         process_dict = {}
-        site_dict = self.sites[site]
+        site_dict = self.sites(c)[site]
         common_cmd_context = {
             "django_cmd": site_dict.django['cmd'],
             "django_args": " ".join(site_dict.get("django").get("args", [])),
@@ -258,7 +290,7 @@ class Configuration(object):
             "version": site_dict.gunicorn['version'],
         }
         gunicorn_cmd_context.update(common_cmd_context)
-        gunicorn_command_template_path = self.sites[site]['supervisor']['gunicorn_command_template']
+        gunicorn_command_template_path = self.sites(c)[site]['supervisor']['gunicorn_command_template']
         gunicorn_command = render_template(
             gunicorn_command_template_path,
             gunicorn_cmd_context,
@@ -326,7 +358,7 @@ class Configuration(object):
                     posixpath.join(env_dict.get("path"), '..', 'tmp', 'celery-%s.pid' % site)),
             }
             celeryd_command_context.update(common_cmd_context)
-            celeryd_command_template_path = self.sites[site]['supervisor']['celeryd_command_template']
+            celeryd_command_template_path = self.sites(c)[site]['supervisor']['celeryd_command_template']
             celeryd_command = render_template(
                 celeryd_command_template_path,
                 celeryd_command_context,
@@ -352,7 +384,7 @@ class Configuration(object):
                     'frequency': conf.get('celerycam-frequency'),
                 }
                 celerycam_command_context.update(common_cmd_context)
-                celerycam_command_template_path = self.sites[site]['supervisor']['celerycam_command_template']
+                celerycam_command_template_path = self.sites(c)[site]['supervisor']['celerycam_command_template']
                 celerycam_command = render_template(
                     celerycam_command_template_path,
                     celerycam_command_context,
@@ -391,11 +423,11 @@ class Configuration(object):
 
         return process_dict
 
-    def environment(self, site, env_dict):
-        site_dict = self.sites[site]
+    def environment(self, c, site, env_dict):
+        site_dict = self.sites(c)[site]
         return site_dict['environment']
 
-    def deployment(self, site, env_dict):
+    def deployment(self, c, site, env_dict):
         """
         Here we add the information from deployments.py and merge it into our site dictionaries.
         Can also be used to output warnings to the user, if he is using an old deployments.py
@@ -420,7 +452,7 @@ class Configuration(object):
             'basic_auth': env_dict.get('basic_auth', False),
             'basic_auth_path': os.path.join(env_dict.get("path"), env_dict.get('basic_auth_path', None) or ""),
 
-            'ssl': env.get('ssl', False),
+            'ssl': env_dict.get('ssl', False),
             'ssl_cert_path': os.path.join(env_dict.get("path"), env_dict.get('ssl_cert_path', None) or ""),
             'ssl_key_path': os.path.join(env_dict.get("path"), env_dict.get('ssl_key_path', None) or ""),
             'bind_ip': env_dict.get('bind_ip', '*'),
@@ -461,14 +493,14 @@ class Configuration(object):
         # Environment #
         ###############
 
-        environment_dict = self.sites[site].get("environment")
+        environment_dict = self.sites(c)[site].get("environment")
         for key, value in env_dict.get("environment", {}).items():
             environment_dict[key] = value
 
         #################
         # Gunicorn dict #
         #################
-        gunicorn_dict = self.sites[site].get("gunicorn")
+        gunicorn_dict = self.sites(c)[site].get("gunicorn")
         gunicorn_dict["workers"] = env_dict.get("gunicorn", {}).get("workers", gunicorn_dict.get("workers"))
         gunicorn_dict["maxrequests"] = env_dict.get("gunicorn", {}).get("maxrequests", gunicorn_dict.get("maxrequests"))
         gunicorn_dict["timeout"] = env_dict.get("gunicorn", {}).get("timeout", gunicorn_dict.get("timeout"))
@@ -477,7 +509,7 @@ class Configuration(object):
         ###############
         # Celery dict #
         ###############
-        celery_dict = self.sites[site].get("celery")
+        celery_dict = self.sites(c)[site].get("celery")
 
         celery_dict["concurrency"] = env_dict.get("celery", {}).get("concurrency", celery_dict.get("concurrency"))
         celery_dict["maxtasksperchild"] = env_dict.get("celery", {}).get("maxtasksperchild",
@@ -487,7 +519,7 @@ class Configuration(object):
         # nginx dict #
         ##############
 
-        nginx_dict = self.sites[site].get("nginx")
+        nginx_dict = self.sites(c)[site].get("nginx")
         nginx_dict["enabled"] = env_dict.get("nginx", {}).get("enabled", nginx_dict.get("enabled"))
         nginx_dict["location_settings"] = {
             "client_max_body_size": env_dict.get("nginx", {}).get("client_max_body_size",
@@ -499,14 +531,14 @@ class Configuration(object):
         # redis dict #
         ##############
 
-        redis_dict = self.sites[site].get("redis")
+        redis_dict = self.sites(c)[site].get("redis")
         redis_dict["template"] = env_dict.get("redis", {}).get("template", redis_dict.get("template"))
 
         ##################
         # memcached dict #
         ##################
 
-        memcached_dict = self.sites[site].get("memcached")
+        memcached_dict = self.sites(c)[site].get("memcached")
         memcached_dict["enabled"] = env_dict.get("memcached", {}).get("enabled", memcached_dict.get("enabled"))
         memcached_dict["size"] = env_dict.get("memcached", {}).get("size", memcached_dict.get("size"))
 
@@ -514,7 +546,7 @@ class Configuration(object):
         # supervisor dict #
         ###################
 
-        supervisor_dict = self.sites[site].get("supervisor")
+        supervisor_dict = self.sites(c)[site].get("supervisor")
         supervisor_dict["template"] = env_dict.get("supervisor", {}).get("template", supervisor_dict.get("template"))
         supervisor_dict["daemon_template"] = env_dict.get("supervisor", {}).get("daemon_template", supervisor_dict.get("daemon_template"))
         supervisor_dict["group_template"] = env_dict.get("supervisor", {}).get("group_template", supervisor_dict.get("group_template"))
@@ -539,7 +571,7 @@ class Configuration(object):
         # newrelic dict #
         #################
 
-        newrelic_dict = self.sites[site].get("newrelic")
+        newrelic_dict = self.sites(c)[site].get("newrelic")
         newrelic_dict["enabled"] = env_dict.get("newrelic", {}).get("enabled", newrelic_dict.get("enabled"))
         newrelic_dict["config_file"] = env_dict.get("newrelic", {}).get("config_file", newrelic_dict.get("config_file"))
         if not newrelic_dict["config_file"].startswith('/'):
@@ -547,15 +579,15 @@ class Configuration(object):
                     deployment_dict["path"],
                     newrelic_dict["config_file"],
                 ))
-        self.sites[site]["environment"]["NEW_RELIC_CONFIG_FILE"] = newrelic_dict["config_file"]
+        self.sites(c)[site]["environment"]["NEW_RELIC_CONFIG_FILE"] = newrelic_dict["config_file"]
         newrelic_dict["environment_name"] = env_dict.get("newrelic", {}).get("environment_name",
                                                                              newrelic_dict.get("environment_name"))
         if newrelic_dict["environment_name"]:
-            self.sites[site]["environment"]["NEW_RELIC_ENVIRONMENT"] = newrelic_dict["environment_name"]
+            self.sites(c)[site]["environment"]["NEW_RELIC_ENVIRONMENT"] = newrelic_dict["environment_name"]
 
         newrelic_dict["license_key"] = env_dict.get("newrelic", {}).get("license_key", newrelic_dict.get("license_key"))
         if newrelic_dict["license_key"]:
-            self.sites[site]["environment"]["NEW_RELIC_LICENSE_KEY"] = newrelic_dict["license_key"]
+            self.sites(c)[site]["environment"]["NEW_RELIC_LICENSE_KEY"] = newrelic_dict["license_key"]
 
         return {
             'deployment': deployment_dict,
@@ -569,7 +601,7 @@ class Configuration(object):
             'newrelic': newrelic_dict,
         }
 
-    def django_manage(self, command, site="main"):
+    def django_manage(self, c, command, site="main"):
         """
         Wrapper around the commands to inject the correct pythonpath.
 
@@ -577,10 +609,10 @@ class Configuration(object):
 
         export PYTHONPATH=/home/app-dev/app/; /home/app-dev/app/bin/python /home/app-dev/app/manage.py migrate
         """
-        site_dict = config.sites[site]
+        site_dict = config.sites(c)[site]
         cmd = site_dict.get("django").get("cmd")
         django_args = " ".join(site_dict.get("django").get("args", []))
-        run('%s %s %s %s' % (site_dict['environment_export'], cmd, command, django_args))
+        c.run('%s %s %s %s' % (site_dict['environment_export'], cmd, command, django_args))
 
 
 if not __name__ == '__main__':
@@ -589,64 +621,67 @@ if not __name__ == '__main__':
 
 
 @task
-def check_config():
+def check_config(c):
     for section in config_ini.config_parser.sections():
         print("[%s]" % section)
         print(config_ini.config_parser.items(section))
 
 
 @task
-def uname():
-    print(env.host_string)
-    run('uname -a')
+def uname(c):
+    print(c.host)
+    c.run('uname -a')
 
 
 @task
-def ls():
-    run('cd %(path)s;ls -lAF' % env)
+def ls(c):
+    env = c.config
+    c.run('cd %(path)s;ls -lAF' % env)
 
 
 @task
-def ps():
+def ps(c):
     """
     show processes of this user
     """
-    run('ps -f -u %(user)s | grep -v "ps -f" | grep -v sshd' % env)
+    env = c.config
+    c.run('ps -f -u %(user)s | grep -v "ps -f" | grep -v sshd' % env)
 
 
 @task
-def download_media(to_dir="./tmp/media/", from_dir="../upload/media/"):
+def download_media(c, to_dir="./tmp/media/", from_dir="../upload/media/"):
     """
     Downloads media from a remote folder, default ../uploads/ -> ./tmp/media/
 
     * Example: download_media:from_dir="py_src/project/media/"
     """
-    print("Downloading media from", env.host_string)
-    env.from_dir = from_dir
-    local(
-        'rsync -avz --no-links --progress --exclude=".svn" -e "ssh" %(user)s@%(host_string)s:"%(path)s/%(from_dir)s"' % env + " " + to_dir)
+    print("Downloading media from", c.host)
+    c.config['from_dir'] = from_dir
+    c.local(
+        'rsync -avz --no-links --progress --exclude=".svn" -e "ssh" %(user)s@%(host)s:"%(path)s/%(from_dir)s"' % c.config + " " + to_dir)
 
 
 @task
-def upload_media(from_dir="./tmp/media/", to_dir="../upload/media/"):
+def upload_media(c, from_dir="./tmp/media/", to_dir="../upload/media/"):
     """
     Uploads media from a local folder, default ./tmp/media -> ../uploads/
     
     * Example: upload_media:to_dir="py_src/project/media/"
     """
-    print("Uploading media to", env.host_string)
-    env.to_dir = to_dir
-    local(
+    env = c.config
+    print("Uploading media to", c.host)
+    env['to_dir'] = to_dir
+    c.local(
         'rsync -avz --no-links --progress --exclude=".svn" ' + from_dir + ' -e "ssh" %(user)s@%(host_string)s:"%(path)s/%(to_dir)s"' % env)
 
 
 @task
-def use_local_config_ini():
-    env.use_local_config_ini = True
+def use_local_config_ini(c):
+    c.config['use_local_config_ini'] = True
 
 
 @task
-def safe_put(*args, **kwargs):
+def safe_put(c, *args, **kwargs):
     """
     a version of put that makes sure the directory exists first.
     :return:
@@ -656,12 +691,12 @@ def safe_put(*args, **kwargs):
     else:
         dst_path = kwargs.get('remote_path', None)
     if dst_path:
-        run('mkdir -p {}'.format(os.path.dirname(dst_path)))
-    return put(*args, **kwargs)
+        c.run('mkdir -p {}'.format(os.path.dirname(dst_path)))
+    return c.put(*args, **kwargs)
 
 
 @task
-def gulp_deploy(css_dir='private', *args, **kwargs):
+def gulp_deploy(c, css_dir='private', *args, **kwargs):
     # Import here to avoid circular references
     from .git import local_branch_is_dirty, local_branch_matches_remote
 
@@ -670,7 +705,7 @@ def gulp_deploy(css_dir='private', *args, **kwargs):
                "matches the remote (deployment) branch.")
     else:
         print("Preparing files (CSS/JS)")
-        local('compass compile {}'.format(css_dir))
+        c.local('compass compile {}'.format(css_dir))
         # Replace compass with 'gulp' when front-end is ready
-        upload_media('./static/css/', '../static/css/')
-        upload_media('./static/js/', '../static/js/')
+        upload_media(c, './static/css/', '../static/css/')
+        upload_media(c, './static/js/', '../static/js/')

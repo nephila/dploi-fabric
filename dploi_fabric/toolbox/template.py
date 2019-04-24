@@ -2,7 +2,7 @@
 import os
 
 from django.conf import settings
-from django.template import Template
+from django.template import Template, Engine
 from django.template.context import Context
 
 import dploi_fabric
@@ -19,7 +19,7 @@ def render_template(path, context, strip_newlines=False):
 
         if strip_newlines:
             template_data = u' '.join(template_data.splitlines())
-        template = Template(template_data)
+        template = Template(template_data, engine=Engine())
     return template.render(context).lstrip()
 
 
