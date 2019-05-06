@@ -1,5 +1,5 @@
 try:
-    import StringIO
+    import io
 except ImportError:
     import io as StringIO
 
@@ -19,7 +19,7 @@ def upload_ssh_deploy_key():
             run("mkdir -p /home/%(user)s/.ssh/" % env)
         run("ssh-keygen -t rsa -f '/home/%(user)s/.ssh/id_rsa' -P ''" % env)
 
-    output = StringIO.StringIO()
+    output = io.StringIO()
     get("/home/%(user)s/.ssh/id_rsa.pub" % env, output)
     output.seek(0)
 
@@ -45,7 +45,7 @@ def upload_ssh_deploy_key():
         response = json.loads(response.content)
 
         if 'message' in response:
-            print(response['message'])
+            print((response['message']))
         else:
             logged_in = True
 

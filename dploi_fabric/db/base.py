@@ -24,7 +24,7 @@ class DumpDatabaseTask(object):
 
     def get_flags_string(self, **flags):
         flag_list = []
-        for k, v in flags.items():
+        for k, v in list(flags.items()):
             result = ('-' if len(k) == 1 else '--') + k
             if v:
                 result += (' ' if len(k) == 1 else '=') + v

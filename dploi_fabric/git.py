@@ -6,7 +6,7 @@ import posixpath
 from fabric import task
 from patchwork.files import exists
 
-from django_utils import append_settings
+from .django_utils import append_settings
 from .messages import CAUTION
 
 
@@ -16,16 +16,16 @@ def update(c):
     test = c.run("cd %(path)s; git --no-pager diff --stat" % env)
     if "files changed" in test.stdout.strip():
         print(CAUTION)
-        print("You have local file changes to the git repository on the server. Run 'fab %s git.reset' to "
+        print(("You have local file changes to the git repository on the server. Run 'fab %s git.reset' to "
               "remove them, or keep them by applying the diff locally with the command "
-              "'git apply filename.diff' and upload it to your git host" % env['identifier'])
+              "'git apply filename.diff' and upload it to your git host" % env['identifier']))
         print()
         print("You now have the following options:")
         print()
         print("[D]ownload diff")
         print("Continue and [R]eset changes")
         print("[E]xit")
-        download_diff = str(input("What do you want to do?"))
+        download_diff = str((input("What do you want to do?")))
         if download_diff.lower() == "d":
             diff = c.run(("cd %(path)s; git diff --color .") % env)
             for i in range(1, 50):

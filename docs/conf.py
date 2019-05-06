@@ -40,8 +40,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'dploi-fabric'
-copyright = u'2012, Benjamin Wohlwend, Kristian Oellegaard, Stefan Foulis'
+project = 'dploi-fabric'
+copyright = '2012, Benjamin Wohlwend, Kristian Oellegaard, Stefan Foulis'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -178,8 +178,8 @@ htmlhelp_basename = 'dploi-fabricdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'dploi-fabric.tex', u'dploi-fabric Documentation',
-   u'Benjamin Wohlwend, Kristian Oellegaard, Stefan Foulis', 'manual'),
+  ('index', 'dploi-fabric.tex', 'dploi-fabric Documentation',
+   'Benjamin Wohlwend, Kristian Oellegaard, Stefan Foulis', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -211,6 +211,6 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'dploi-fabric', u'dploi-fabric Documentation',
-     [u'Benjamin Wohlwend, Kristian Oellegaard, Stefan Foulis'], 1)
+    ('index', 'dploi-fabric', 'dploi-fabric Documentation',
+     ['Benjamin Wohlwend, Kristian Oellegaard, Stefan Foulis'], 1)
 ]

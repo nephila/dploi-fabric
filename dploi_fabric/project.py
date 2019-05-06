@@ -3,12 +3,12 @@ import os
 from fabric.api import env, prompt, put, run, task
 from fabric.contrib import files
 
-import django_utils
+from . import django_utils
 from dploi_fabric import git
-from github import upload_ssh_deploy_key
-from nginx import update_config_file as nginx_update_config_file
-from redis import update_config_file as redis_update_config_file
-from supervisor import update_config_file as supervisor_update_config_file
+from .github import upload_ssh_deploy_key
+from .nginx import update_config_file as nginx_update_config_file
+from .redis import update_config_file as redis_update_config_file
+from .supervisor import update_config_file as supervisor_update_config_file
 from .utils import config
 
 
@@ -47,7 +47,7 @@ def init():
         run('cd %(path)s; sh init.sh -c %(buildout_cfg)s' % env)
         django_utils.append_settings()
     elif tool == "virtualenv":
-        import virtualenv
+        from . import virtualenv
         virtualenv.create()
         django_utils.append_settings()
         django_utils.manage("syncdb --all --noinput")
@@ -55,7 +55,7 @@ def init():
     else:
         print("WARNING: Couldnt find [checkout] tool - please set it to either virtualenv "
               "or buildout in your config.ini")
-        print("Got tool: %s" % tool)
+        print(("Got tool: %s" % tool))
         django_utils.append_settings()
 
 
@@ -65,7 +65,7 @@ def upload_ssl():
     Upload the SSL key and certificate to the directories and with the filenames
     specified in your settings.
     """
-    for site, site_dict in config.sites.items():
+    for site, site_dict in list(config.sites.items()):
         ssl_key_path = prompt("SSL Key path (%s):" % site)
         ssl_cert_path = prompt("SSL Certificate path (%s):" % site)
         put(ssl_key_path, site_dict.get("deployment").get("ssl_key_path"))

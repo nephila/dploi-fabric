@@ -6,7 +6,7 @@ from functools import wraps
 from fabric.api import env, prompt
 from fabric.operations import run
 
-from toolbox import logger
+from .toolbox import logger
 
 
 logged_output = {'stdout': "", 'stderr': ""}
@@ -79,7 +79,7 @@ def register_deployment(func):
 
         cmd = 'curl -H "x-api-key:%s"' % env['newrelic']['deployment_tracking_apikey']
 
-        for key, val in options.items():
+        for key, val in list(options.items()):
             cmd += ' --data-urlencode "deployment[%s]=%s"' % (key, val)
 
         cmd += " https://rpm.newrelic.com/deployments.xml"

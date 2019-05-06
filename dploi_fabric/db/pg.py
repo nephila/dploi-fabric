@@ -34,7 +34,7 @@ def _get_path(env, reason):
 
 def _get_flags_string(**flags):
     flag_list = []
-    for k, v in flags.items():
+    for k, v in list(flags.items()):
         result = ('-' if len(k) == 1 else '--') + k
         if v:
             result += (' ' if len(k) == 1 else '=') + v

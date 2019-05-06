@@ -2,8 +2,8 @@ from fabric import task
 from patchwork.files import exists
 
 try:
-    import ConfigParser
-    import StringIO
+    import configparser
+    import io
 except ImportError:
     import io as StringIO
     import configparser as ConfigParser
@@ -24,23 +24,23 @@ from .utils import DATA_DIRECTORY, STATIC_COLLECTED, config
 def django_exec(c, dictionary={}, tool="buildout"):
     # TODO: Remove this and change dependants to use utils.config
     env = c.config
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config_file = os.path.join(env['path'], "config.ini")
     django_base = "."  # default to current dir
     if exists(config_file):
-        output = StringIO.StringIO()
-        c.get(u"%s" % config_file, output)
+        output = io.StringIO()
+        c.get("%s" % config_file, output)
         output.seek(0)
         config.readfp(output)
 
         try:
             tool = config.get("checkout", "tool")
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        except (configparser.NoSectionError, configparser.NoOptionError):
             tool = "buildout"  # default to buildout
 
         try:
             django_base = config.get("django", "base")
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        except (configparser.NoSectionError, configparser.NoOptionError):
             pass
     if django_base == ".":
         django_base = ""
@@ -92,9 +92,9 @@ def append_settings(c):
     if append:
         site_config = config.sites(c)["main"]
         settings_file_path = django_settings_file(c)
-        print("Appending auto generated settings to", settings_file_path)
-        output = StringIO.StringIO()
-        c.get(u"%s" % os.path.join(env['path'], "../config/django.py"), output)
+        print(("Appending auto generated settings to", settings_file_path))
+        output = io.StringIO()
+        c.get("%s" % os.path.join(env['path'], "../config/django.py"), output)
         output.seek(0)
         manual_settings = output.read()
 
@@ -139,12 +139,12 @@ MEDIA_ROOT = "%(media_root)s"
             'media_root': posixpath.join(site_config.get("deployment").get("path"), DATA_DIRECTORY, 'media/'),
         }
 
-        output = StringIO.StringIO()
+        output = io.StringIO()
         c.get(settings_file_path, output)
         output.seek(0)
         settings_file = output.read()
 
         c.run("mkdir -p %s" % posixpath.join(site_config.get("deployment").get("path"), "_gen/"))
-        c.put(StringIO.StringIO("%s\n%s\n%s" % (settings_file, additional_settings, manual_settings)),
+        c.put(io.StringIO("%s\n%s\n%s" % (settings_file, additional_settings, manual_settings)),
               site_config.get("deployment").get("generated_settings_path"))
-        c.put(StringIO.StringIO(""), posixpath.join(site_config.get("deployment").get("path"), "_gen/__init__.py"))
+        c.put(io.StringIO(""), posixpath.join(site_config.get("deployment").get("path"), "_gen/__init__.py"))

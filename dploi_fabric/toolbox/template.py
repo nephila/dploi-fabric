@@ -18,7 +18,7 @@ def render_template(path, context, strip_newlines=False):
         template_data = template_file.read()
 
         if strip_newlines:
-            template_data = u' '.join(template_data.splitlines())
+            template_data = ' '.join(template_data.splitlines())
         template = Template(template_data, engine=Engine())
     return template.render(context).lstrip()
 

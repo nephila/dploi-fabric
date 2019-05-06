@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 try:
-    import StringIO
+    import io
 except ImportError:
     import io as StringIO
 import posixpath
@@ -15,7 +15,7 @@ from dploi_fabric.utils import config
 
 @task
 def update_config_file(dryrun=False):
-    for site, site_config in config.sites.items():
+    for site, site_config in list(config.sites.items()):
         redis_processes = [(x, site_config.processes[x]) for x in site_config.processes if site_config.processes[x]["type"] == "redis"]
         template_path = site_config['redis']['template']
         print(redis_processes)
@@ -35,8 +35,8 @@ def update_config_file(dryrun=False):
             path = posixpath.abspath(posixpath.join(site_config['deployment']['path'], '..', 'config', process_name + '.conf'))
             output = render_template(template_path, context_dict)
             if dryrun:
-                print(path + ":")
+                print((path + ":"))
                 print(output)
             else:
-                put(StringIO.StringIO(output), path)
+                put(io.StringIO(output), path)
 

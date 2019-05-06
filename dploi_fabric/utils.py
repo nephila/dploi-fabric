@@ -2,7 +2,7 @@ from fabric import task
 from patchwork.files import exists
 
 try:
-    import StringIO
+    import io
 except ImportError:
     import io as StringIO
 
@@ -147,13 +147,13 @@ class Configuration(object):
             else:
                 config_file = os.path.join(env['path'], "config.ini")
                 if exists(c, config_file):
-                    output = StringIO.StringIO()
-                    c.get(u"%s" % config_file, output)
+                    output = io.StringIO()
+                    c.get("%s" % config_file, output)
                     output.seek(0)
                 else:
                     raise Exception("Missing config.ini, tried path %s" % config_file)
         else:
-            output = StringIO.StringIO(config_file_content)
+            output = io.StringIO(config_file_content)
 
         if not env_dict:
             env_dict = env
@@ -169,7 +169,7 @@ class Configuration(object):
 
         for site in config.section_namespaces("django") or ["main"]:
             attr_dict = self.defaults.copy()
-            for key, value in attr_dict.items():
+            for key, value in list(attr_dict.items()):
                 attr_dict[key] = None if value is None else _AttributeDict(value.copy())
             for section in config.sections():
                 section = section.split(":")[0]
@@ -185,7 +185,7 @@ class Configuration(object):
                     continue
 
                 if self.defaults.get(section) is None:
-                    print("Caution: Section %s is not supported, skipped" % section)
+                    print(("Caution: Section %s is not supported, skipped" % section))
                     continue
                 for option, default_value in config.items(section, env=site):
                     setting = self.defaults.get(section).get(option)
@@ -242,8 +242,8 @@ class Configuration(object):
         takes a dict with environment variables and products a shell compatible export statement:
         'export PYTHONPATH="stuff/here:more/here" USER="mysite-dev";'
         """
-        vars = " ".join([u'%s=%s' % (key, value) for key, value in environment.items()])
-        return u"export %s;" % vars
+        vars = " ".join(['%s=%s' % (key, value) for key, value in list(environment.items())])
+        return "export %s;" % vars
 
     def sites(self, c):
         if getattr(self, "_sites", False) is False:
@@ -411,7 +411,7 @@ class Configuration(object):
             }
         if site_dict.get('processes'):
             processes = site_dict.get('processes')
-            for process, command in processes.items():
+            for process, command in list(processes.items()):
                 process_name = "%s_%s_process_%s" % (env_dict.get("user"), site, process)
                 process_dict[process_name] = {
                     'command': posixpath.join(env_dict.get("path"), command),
@@ -494,7 +494,7 @@ class Configuration(object):
         ###############
 
         environment_dict = self.sites(c)[site].get("environment")
-        for key, value in env_dict.get("environment", {}).items():
+        for key, value in list(env_dict.get("environment", {}).items()):
             environment_dict[key] = value
 
         #################
@@ -623,13 +623,13 @@ if not __name__ == '__main__':
 @task
 def check_config(c):
     for section in config_ini.config_parser.sections():
-        print("[%s]" % section)
-        print(config_ini.config_parser.items(section))
+        print(("[%s]" % section))
+        print((config_ini.config_parser.items(section)))
 
 
 @task
 def uname(c):
-    print(c.host)
+    print((c.host))
     c.run('uname -a')
 
 
@@ -655,7 +655,7 @@ def download_media(c, to_dir="./tmp/media/", from_dir="../upload/media/"):
 
     * Example: download_media:from_dir="py_src/project/media/"
     """
-    print("Downloading media from", c.host)
+    print(("Downloading media from", c.host))
     c.config['from_dir'] = from_dir
     c.local(
         'rsync -avz --no-links --progress --exclude=".svn" -e "ssh" %(user)s@%(host)s:"%(path)s/%(from_dir)s"' % c.config + " " + to_dir)
@@ -669,7 +669,7 @@ def upload_media(c, from_dir="./tmp/media/", to_dir="../upload/media/"):
     * Example: upload_media:to_dir="py_src/project/media/"
     """
     env = c.config
-    print("Uploading media to", c.host)
+    print(("Uploading media to", c.host))
     env['to_dir'] = to_dir
     c.local(
         'rsync -avz --no-links --progress --exclude=".svn" ' + from_dir + ' -e "ssh" %(user)s@%(host_string)s:"%(path)s/%(to_dir)s"' % env)

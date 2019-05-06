@@ -1,5 +1,5 @@
 try:
-    import StringIO
+    import io
 except ImportError:
     import io as StringIO
 
@@ -19,7 +19,7 @@ def reload_nginx():
 @task
 def update_config_file(dryrun=False):
     output = ""
-    for site, site_config in config.sites.items():
+    for site, site_config in list(config.sites.items()):
         context_dict = site_config
         context_dict.update({
             'domains': " ".join(site_config.deployment.get("domains")[site]),
@@ -30,8 +30,8 @@ def update_config_file(dryrun=False):
         output += render_template(template_path, context_dict)
     path = posixpath.abspath(posixpath.join(env.path, '..', 'config', 'nginx.conf'))
     if dryrun:
-        print(path + ':')
+        print((path + ':'))
         print(output)
     else:
-        put(StringIO.StringIO(output), path)
+        put(io.StringIO(output), path)
         reload_nginx()
