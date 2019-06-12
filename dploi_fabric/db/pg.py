@@ -6,8 +6,9 @@ from fabric import task
 
 @task
 def dump_db(c, reason='unknown', compress=False, **flags):
-    file_name = _get_path(c.config['env'], reason)
-    command = _get_command(c.config['env'], file_name, **flags)
+    env = c.config  # getting env
+    file_name = _get_path(env, reason)
+    command = _get_command(env, file_name, **flags)
     c.run(command)
     if compress:
         c.run('gzip ' + file_name)
