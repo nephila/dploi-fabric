@@ -37,10 +37,10 @@ def update(c):
         elif download_diff.lower() == "e":
             exit()
     c.run("cd %(path)s; find . -iname '*.pyc' -delete" % env)
-    c.run("cd %(path)s; git fetch origin" % env)
+    c.run("cd %(path)s; git fetch origin" % env, pty=True)
     c.run("cd %(path)s; git reset --hard" % env)
     c.run("cd %(path)s; git checkout %(branch)s" % env)
-    c.run("cd %(path)s; git pull origin %(branch)s" % env)
+    c.run("cd %(path)s; git pull origin %(branch)s" % env, pty=True)
     if exists(posixpath.join(env['path'], ".gitmodules")):
         c.run("cd %(path)s; git submodule init" % env)
         c.run("cd %(path)s; git submodule update" % env)
