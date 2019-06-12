@@ -1,10 +1,7 @@
 from fabric import task
 from patchwork.files import exists
 
-try:
-    import io
-except ImportError:
-    import io as StringIO
+from io import BytesIO
 
 import os
 import posixpath
@@ -147,13 +144,13 @@ class Configuration(object):
             else:
                 config_file = os.path.join(env['path'], "config.ini")
                 if exists(c, config_file):
-                    output = io.StringIO()
+                    output = BytesIO()
                     c.get("%s" % config_file, output)
                     output.seek(0)
                 else:
                     raise Exception("Missing config.ini, tried path %s" % config_file)
         else:
-            output = io.StringIO(config_file_content)
+            output = BytesIO(config_file_content)
 
         if not env_dict:
             env_dict = env

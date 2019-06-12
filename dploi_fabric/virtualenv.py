@@ -8,7 +8,7 @@ def update(c):
     """
     updates a virtualenv (pip install requirements.txt)
     """
-    c.run('cd %(path)s; bin/pip install -r requirements.txt --upgrade --no-deps' % config.sites(c)["main"].deployment)
+    c.run('cd %(path)s; bin/pip install -r requirements.txt --upgrade --no-deps' % config.sites(c)["main"].get("deployment"))
 
 
 @task
@@ -16,7 +16,7 @@ def create(c):
     """
     creates a virtualenv and calls update
     """
-    c.run('cd %(path)s; virtualenv . --system-site-packages --setuptools' % config.sites["main"].deployment)
+    c.run('cd %(path)s; virtualenv . --system-site-packages --setuptools' % config.sites(c)["main"].get("deployment"))
     update(c)
     # this is ugly. I know. But it seems that on first run, pip does not
     # install the correct version of packages that are pulled directly from
