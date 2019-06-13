@@ -1,10 +1,9 @@
-from fabric import task
-from patchwork.files import exists
-
-from io import BytesIO
-
+import io
 import os
 import posixpath
+
+from fabric import task
+from patchwork.files import exists
 
 from dploi_fabric.toolbox.template import app_package_path, render_template
 from .messages import DOMAIN_DICT_DEPRECATION_WARNING
@@ -144,19 +143,19 @@ class Configuration(object):
             else:
                 config_file = os.path.join(env['path'], "config.ini")
                 if exists(c, config_file):
-                    output = BytesIO()
+                    output = io.BytesIO()
                     c.get("%s" % config_file, output)
                     output.seek(0)
                 else:
                     raise Exception("Missing config.ini, tried path %s" % config_file)
         else:
-            output = BytesIO(config_file_content)
+            output = io.BytesIO(config_file_content)
 
         if not env_dict:
             env_dict = env
 
         config = EnvConfigParser()
-        config.readfp(output)
+        config.read_file(io.TextIOWrapper(output))
         self._sites = {}
 
         variables = {

@@ -1,13 +1,8 @@
-try:
-    import io
-except ImportError:
-    import io as StringIO
-
 import getpass
+import io
 import json
-import subprocess
-
 import requests
+import subprocess
 from fabric.api import env, get, prompt, run, task
 from fabric.contrib import files
 

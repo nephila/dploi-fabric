@@ -55,7 +55,7 @@ def init():
     else:
         print("WARNING: Couldnt find [checkout] tool - please set it to either virtualenv "
               "or buildout in your config.ini")
-        print(("Got tool: %s" % tool))
+        print("Got tool: %s" % tool)
         django_utils.append_settings()
 
 

@@ -1,7 +1,7 @@
 try:
-    import io
+    import StringIO as io
 except ImportError:
-    import io as StringIO
+    import io
 import posixpath
 from copy import copy
 
@@ -13,19 +13,19 @@ from dploi_fabric.utils import config, safe_put
 
 @task
 def stop(c):
-    for site, site_config in list(config.sites.items()):
+    for site, site_config in list(config.sites(c).items()):
         c.run('%s stop %s:*' % (site_config['supervisor']['supervisorctl_command'], get_group_name(site, site_config)))
 
 
 @task
 def start(c):
-    for site, site_config in list(config.sites.items()):
+    for site, site_config in list(config.sites(c).items()):
         c.run('%s start %s:*' % (site_config['supervisor']['supervisorctl_command'], get_group_name(site, site_config)))
 
 
 @task
 def restart(c):
-    for site, site_config in list(config.sites.items()):
+    for site, site_config in list(config.sites(c).items()):
         c.run('%s restart %s:*' % (site_config['supervisor']['supervisorctl_command'], get_group_name(site, site_config)))
 
 
@@ -36,7 +36,7 @@ def status(c):
 
     Note: "status" does not yet support the group syntax
     """
-    for site, site_config in list(config.sites.items()):
+    for site, site_config in list(config.sites(c).items()):
         group_name = get_group_name(site, site_config)
         for process_name, process_cmd in list(site_config.processes.items()):
             c.run('%s status %s:%s' % (site_config['supervisor']['supervisorctl_command'], group_name, process_name))
@@ -44,7 +44,7 @@ def status(c):
 
 @task
 def add(c):
-    for site, site_config in list(config.sites.items()):
+    for site, site_config in list(config.sites(c).items()):
         group_name = get_group_name(site, site_config)
         for process_name, process_cmd in list(site_config.processes.items()):
             c.run('%s add %s:%s' % (site_config['supervisor']['supervisorctl_command'], group_name, process_name))
@@ -52,7 +52,7 @@ def add(c):
 
 @task
 def update(c):
-    for site, site_config in list(config.sites.items()):
+    for site, site_config in list(config.sites(c).items()):
         group_name = get_group_name(site, site_config)
         for process_name, process_cmd in list(site_config.processes.items()):
             c.run('%s update %s:%s' % (site_config['supervisor']['supervisorctl_command'], group_name, process_name))
@@ -66,7 +66,7 @@ def get_group_name(site, site_config):
 def update_config_file(c, dryrun=False, update_command=update, load_config=True):
     output = ''
     groups = {}
-    for site, site_config in list(config.sites.items()):
+    for site, site_config in list(config.sites(c).items()):
         template_path = site_config['supervisor']['template']
         group_template_path = site_config['supervisor']['group_template']
         group_name = get_group_name(site, site_config)
@@ -104,9 +104,9 @@ def update_config_file(c, dryrun=False, update_command=update, load_config=True)
     supervisord_conf_output = render_template(daemon_template_path, copy(site_config))
 
     if dryrun:
-        print((path + ':'))
+        print(path + ':')
         print(output)
-        print((daemon_template_path + ':'))
+        print(daemon_template_path + ':')
         print(supervisord_conf_output)
     else:
         safe_put(io.StringIO(output), path)

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-try:
-    import configparser
-except ImportError:
-    import configparser as ConfigParser
+import configparser
 
 
-class EnvConfigParser(configparser.SafeConfigParser):
+class EnvConfigParser(configparser.RawConfigParser):
     """ A config parser that can handle "namespaced" sections. Example:
 
     [base]
@@ -16,18 +13,22 @@ class EnvConfigParser(configparser.SafeConfigParser):
 
     """
 
+    # Backport from Python2 configparser
+    _boolean_states = {'1': True, 'yes': True, 'true': True, 'on': True,
+                       '0': False, 'no': False, 'false': False, 'off': False}
+
     def _concat(self, parent, child):
         return '%s:%s' % (parent, child)
 
     def items(self, section, raw=False, vars=None, env=None):
         items = {}
         try:
-            items.update(dict(configparser.SafeConfigParser.items(self, section, raw, vars)))
+            items.update(dict(configparser.RawConfigParser.items(self, section, raw, vars)))
         except configparser.NoSectionError:
             pass
         if env:
             try:
-                env_items = dict(configparser.SafeConfigParser.items(self, self._concat(section, env), raw, vars))
+                env_items = dict(configparser.RawConfigParser.items(self, self._concat(section, env), raw, vars))
                 items.update(env_items)
             except configparser.NoSectionError:
                 pass
@@ -38,11 +39,11 @@ class EnvConfigParser(configparser.SafeConfigParser):
     def get(self, section, option, raw=False, vars=None, env=None):
         if env and self.has_section(self._concat(section, env)):
             try:
-                return configparser.SafeConfigParser.get(self, self._concat(section, env), option, raw, vars)
+                return configparser.RawConfigParser.get(self, self._concat(section, env), option, raw, vars)
             except configparser.NoOptionError:
                 if not self.has_section(section):
                     raise
-        return configparser.SafeConfigParser.get(self, section, option, raw, vars)
+        return configparser.RawConfigParser.get(self, section=section, option=option, raw=raw, vars=vars)
 
     def _get(self, section, conv, option, env=None):
         return conv(self.get(section, option, env=env))
@@ -61,10 +62,10 @@ class EnvConfigParser(configparser.SafeConfigParser):
 
     def has_section(self, section, env=None, strict=False):
         if not env:
-            return configparser.SafeConfigParser.has_section(self, section)
+            return configparser.RawConfigParser.has_section(self, section)
         return (
-                (not strict and configparser.SafeConfigParser.has_section(self, section)) or
-                configparser.SafeConfigParser.has_section(self, self._concat(section, env))
+                (not strict and configparser.RawConfigParser.has_section(self, section)) or
+                configparser.RawConfigParser.has_section(self, self._concat(section, env))
         )
 
     def section_namespaces(self, section):
