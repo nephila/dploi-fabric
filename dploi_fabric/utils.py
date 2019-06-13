@@ -166,7 +166,7 @@ class Configuration(object):
                     else:
                         value = config.get(section, option, env=site) % variables
                     attr_dict[section][option] = value
-            self.sites[site] = _AttributeDict(attr_dict)
+            self._sites[site] = _AttributeDict(attr_dict)
             attr_dict.update(self.deployment(site, env_dict))
             if attr_dict.get("checkout").get("tool") == "buildout":
                 # e.g. bin/django -> /home/username/app/bin/django
