@@ -1,7 +1,13 @@
-import ConfigParser
-import StringIO
+try:
+    import ConfigParser
+    import StringIO
+except ImportError:
+    import configparser as ConfigParser
+    import io as StringIO
+
 import unittest
 from dploi_fabric.utils import EnvConfigParser, Configuration, _AttributeDict, STATIC_COLLECTED
+
 
 class TestConfigurationTestCase(unittest.TestCase):
     test_config = """
@@ -65,7 +71,6 @@ enabled=true""", self.env_dict)
         self.assertEqual(self.sites["main"].get("static").get("/static/"), STATIC_COLLECTED)
 
 
-
 class TestInheritConfigParserRead(unittest.TestCase):
     test_config = """
 [base]
@@ -100,25 +105,25 @@ foo = bar
         self.assertRaises(ConfigParser.NoSectionError, lambda: self.config.items('other'))
 
     def test_inherited_value(self):
-        self.assertEquals(self.config.get('base', 'host', env='dev'), 'dev.example.com')
+        self.assertEqual(self.config.get('base', 'host', env='dev'), 'dev.example.com')
 
     def test_value_from_base(self):
-        self.assertEquals(self.config.get('base', 'name', env='dev'), 'test')
+        self.assertEqual(self.config.get('base', 'name', env='dev'), 'test')
 
     def test_overriden_value(self):
-        self.assertEquals(self.config.get('base', 'type',), 'nginx')
-        self.assertEquals(self.config.get('base', 'type', env='dev'), 'apache')
+        self.assertEqual(self.config.get('base', 'type',), 'nginx')
+        self.assertEqual(self.config.get('base', 'type', env='dev'), 'apache')
 
     def test_correct_exception_on_no_base(self):
         self.assertRaises(ConfigParser.NoOptionError, lambda: self.config.get('other', 'baz', env='dev'))
 
     def test_int(self):
-        self.assertEquals(self.config.getint('base', 'count',), 5)
-        self.assertEquals(self.config.getint('base', 'count', env='dev'), 1)
+        self.assertEqual(self.config.getint('base', 'count',), 5)
+        self.assertEqual(self.config.getint('base', 'count', env='dev'), 1)
 
     def test_float(self):
-        self.assertEquals(self.config.getfloat('base', 'threshold',), 1.0)
-        self.assertEquals(self.config.getfloat('base', 'threshold', env='dev'), 0.9)
+        self.assertEqual(self.config.getfloat('base', 'threshold',), 1.0)
+        self.assertEqual(self.config.getfloat('base', 'threshold', env='dev'), 0.9)
 
     def test_bool(self):
         self.assertFalse(self.config.getboolean('base', 'enable',))

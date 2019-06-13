@@ -1,14 +1,21 @@
-import ConfigParser
-import StringIO
-from fabric.decorators import task
-from fabric.api import env, get, put
+try:
+    import ConfigParser
+    import StringIO
+except ImportError:
+    import configparser as ConfigParser
+    import io as StringIO
+
 import os
-from fabric.contrib.files import exists
-from .utils import config
 import posixpath
-from .utils import STATIC_COLLECTED, DATA_DIRECTORY
-from pprint import pformat
+from fabric.api import env, get, put
+from fabric.contrib.files import exists
+from fabric.decorators import task
 from fabric.operations import run
+from pprint import pformat
+
+from .utils import STATIC_COLLECTED, DATA_DIRECTORY
+from .utils import config
+
 
 def django_exec(dictionary = {}, tool="buildout"):
     # TODO: Remove this and change dependants to use utils.config
@@ -42,9 +49,11 @@ def django_exec(dictionary = {}, tool="buildout"):
     dictionary['django_settings'] = django_settings
     dictionary['checkout_tool'] = tool
     return dictionary
-    
+
+
 def django_settings_file(dictionary = {}): # TODO: Remove this and change dependants to use utils.config
     return django_exec().get("django_settings")
+
 
 @task
 def manage(*args):
@@ -52,18 +61,21 @@ def manage(*args):
     Proxy for manage.py
     """
     config.django_manage(" ".join(args))
-    
+
+
 @task
 def collectstatic(staticdir='static'): # As defined in puppet config
     # TODO: Use utils.config
     run(('cd %(path)s; mkdir -p ' + staticdir) % env)
     manage("collectstatic", "--noinput", "--link")
 
+
 @task
 def load_fixture(file_path):
     remote_path = put(file_path, '~/tmp/')[0]
     manage('loaddata %s' % remote_path)
     run('rm %s' % remote_path)
+
 
 @task
 def append_settings():
@@ -72,9 +84,9 @@ def append_settings():
     if append:
         site_config = config.sites["main"]
         settings_file_path = django_settings_file()
-        print "Appending auto generated settings to", settings_file_path
+        print("Appending auto generated settings to", settings_file_path)
         output = StringIO.StringIO()
-        get(u"%s" % os.path.join(env.path, "../config/django.py"), output)
+        get("%s" % os.path.join(env.path, "../config/django.py"), output)
         output.seek(0)
         manual_settings = output.read()
 

@@ -4,9 +4,12 @@ from fabric.api import env, task, prompt, run, get
 from fabric.contrib import files
 import getpass
 import json
-import urllib2
 import subprocess
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    import io as StringIO
+
 import requests
 
 @task

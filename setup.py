@@ -3,7 +3,7 @@ import metadata as m
 from setuptools import setup, find_packages
 
 install_requires = [
-    "fabric >= 1.2",
+    "fabric3",
     "requests",
     "Django",
 ]

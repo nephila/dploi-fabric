@@ -1,20 +1,24 @@
-from dploi_fabric.toolbox.template import app_package_path, render_template
 import os
 import posixpath
 
-import StringIO
+from dploi_fabric.toolbox.template import app_package_path, render_template
+
+try:
+    import StringIO
+except ImportError:
+    import io as StringIO
+
 from fabric.operations import run, local, put
 from fabric.api import task, env, get
 from fabric.contrib.files import exists
 from fabric.state import _AttributeDict
 
-
 from .toolbox.datastructures import EnvConfigParser
 from .messages import DOMAIN_DICT_DEPRECATION_WARNING
 
-
 STATIC_COLLECTED = "../static/"
 DATA_DIRECTORY = "../upload/"
+
 
 class Configuration(object):
     """
@@ -99,6 +103,7 @@ class Configuration(object):
         },
         'logdir': None,
     }
+
     def load_sites(self, config_file_content=None, env_dict=None):
         """
         Called from self.sites and returns a dictionary with the different sites
@@ -110,19 +115,19 @@ class Configuration(object):
             else:
                 config_file = os.path.join(env.path, "config.ini")
                 if exists(config_file):
-                    output = StringIO.StringIO()
-                    get(u"%s" % config_file, output)
+                    output = StringIO.BytesIO()
+                    get("%s" % config_file, output)
                     output.seek(0)
                 else:
                     raise Exception("Missing config.ini, tried path %s" % config_file)
         else:
-            output = StringIO.StringIO(config_file_content)
+            output = StringIO.BytesIO(config_file_content)
 
         if not env_dict:
             env_dict = env
 
         config = EnvConfigParser()
-        config.readfp(output)
+        config.read_file(StringIO.TextIOWrapper(output))
         self._sites = {}
 
         variables = {
@@ -148,7 +153,7 @@ class Configuration(object):
                     continue
 
                 if self.defaults.get(section) is None:
-                    print "Caution: Section %s is not supported, skipped" % section
+                    print("Caution: Section %s is not supported, skipped" % section)
                     continue
                 for option, default_value in config.items(section, env=site):
                     setting = self.defaults.get(section).get(option)
@@ -184,12 +189,12 @@ class Configuration(object):
                 ]
                 attr_dict["django"]["cmd"] = " ".join(new_django_cmd)
                 if attr_dict["django"]["append_settings"]:
-                    attr_dict["django"]["args"].append(" --settings=%s" % ('_gen.settings', ))
+                    attr_dict["django"]["args"].append(" --settings=%s" % ('_gen.settings',))
             if attr_dict["newrelic"]["enabled"]:
                 attr_dict["django"]["cmd"] = posixpath.join(
                     attr_dict.get("deployment").get("path"),
                     "bin/newrelic-admin"
-                ) +  " run-program " + attr_dict["django"]["cmd"]
+                ) + " run-program " + attr_dict["django"]["cmd"]
             attr_dict.update({'processes': self.processes(site, env_dict)})
             attr_dict['environment'] = self.environment(site, env_dict)
             attr_dict['environment'].setdefault('DEPLOYMENT_SITE', site)
@@ -205,12 +210,12 @@ class Configuration(object):
         takes a dict with environment variables and products a shell compatible export statement:
         'export PYTHONPATH="stuff/here:more/here" USER="mysite-dev";'
         """
-        vars = " ".join([u'%s=%s' % (key, value) for key, value in environment.items()])
-        return u"export %s;" % vars
+        vars = " ".join(['%s=%s' % (key, value) for key, value in environment.items()])
+        return "export %s;" % vars
 
     @property
     def sites(self):
-        if getattr(self, "_sites", False) == False:
+        if not getattr(self, "_sites", False):
             self.load_sites()
         return self._sites
 
@@ -233,13 +238,15 @@ class Configuration(object):
             "django_cmd": site_dict.django['cmd'],
             "django_args": " ".join(site_dict.get("django").get("args", [])),
         }
-        socket = posixpath.normpath(posixpath.join(env_dict.get("path"), "..", "tmp", "%s_%s_gunicorn.sock" % (env_dict.get("user"), site)))  # Asserts pony project layout
+        socket = posixpath.normpath(posixpath.join(env_dict.get("path"), "..", "tmp", "%s_%s_gunicorn.sock" % (
+        env_dict.get("user"), site)))  # Asserts pony project layout
         if site_dict.gunicorn['bind']:
             bind = site_dict.gunicorn['bind']
         else:
             bind = 'unix:{}'.format(socket)
 
-        cmd = env_dict.get("path") if not site_dict.get("newrelic").get("enabled") else '%sbin/newrelic-admin run-program %s' % (env_dict.get("path"), env_dict.get("path"))
+        cmd = env_dict.get("path") if not site_dict.get("newrelic").get(
+            "enabled") else '%sbin/newrelic-admin run-program %s' % (env_dict.get("path"), env_dict.get("path"))
         cmd += 'bin/gunicorn'
 
         gunicorn_cmd_context = {
@@ -259,12 +266,12 @@ class Configuration(object):
             strip_newlines=True,
         )
         process_dict["%s_%s_gunicorn" % (env_dict.get("user"), site)] = {
-                    'command': gunicorn_command,
-                    'port': None,
-                    'socket': gunicorn_cmd_context['socket'],
-                    'type': 'gunicorn',
-                    'priority': 100,
-                }
+            'command': gunicorn_command,
+            'port': None,
+            'socket': gunicorn_cmd_context['socket'],
+            'type': 'gunicorn',
+            'priority': 100,
+        }
 
         custom_processes = env_dict.get("custom_processes") or []
 
@@ -289,17 +296,20 @@ class Configuration(object):
             }
 
         if site_dict.get("memcached").get("enabled"):
-            memcached_socket = posixpath.normpath(posixpath.join(env_dict.get("path"), "..", "tmp", "%s_%s_memcached.sock" % (env_dict.get("user"), site))) # Asserts pony project layout
+            memcached_socket = posixpath.normpath(posixpath.join(env_dict.get("path"), "..", "tmp",
+                                                                 "%s_%s_memcached.sock" % (env_dict.get("user"),
+                                                                                           site)))  # Asserts pony project layout
             process_dict["%s_%s_memcached" % (env_dict.get("user"), site)] = {
-                        'command': "memcached -s %s -m %d" % (memcached_socket, int(site_dict.get("memcached").get("size"))),
-                        'port': None,
-                        'socket': memcached_socket,
-                        'type': 'memcached',
-                        'priority': 60,
-                }
+                'command': "memcached -s %s -m %d" % (memcached_socket, int(site_dict.get("memcached").get("size"))),
+                'port': None,
+                'socket': memcached_socket,
+                'type': 'memcached',
+                'priority': 60,
+            }
         if site_dict.get("celery").get("enabled"):
             conf = site_dict.get("celery")
-            cmd = env_dict.get("path") if not site_dict.get("newrelic").get("enabled") else '%sbin/newrelic-admin run-program %s' % (env_dict.get("path"), env_dict.get("path"))
+            cmd = env_dict.get("path") if not site_dict.get("newrelic").get(
+                "enabled") else '%sbin/newrelic-admin run-program %s' % (env_dict.get("path"), env_dict.get("path"))
             cmd += 'bin/celery'
             celeryd_command_context = {
                 'concurrency': conf.get("concurrency"),
@@ -312,7 +322,8 @@ class Configuration(object):
                 'has_cam': conf.get("celerycam"),
                 'enable_beat': conf.get("celerybeat"),
                 'cmd': cmd,
-                'pidfile': posixpath.normpath(posixpath.join(env_dict.get("path"), '..', 'tmp', 'celery-%s.pid' % site)),
+                'pidfile': posixpath.normpath(
+                    posixpath.join(env_dict.get("path"), '..', 'tmp', 'celery-%s.pid' % site)),
             }
             celeryd_command_context.update(common_cmd_context)
             celeryd_command_template_path = self.sites[site]['supervisor']['celeryd_command_template']
@@ -322,15 +333,15 @@ class Configuration(object):
                 strip_newlines=True,
             )
             process_dict["%s_%s_celeryd" % (env_dict.get("user"), site)] = {
-                    'command': celeryd_command,
-                    'port': None,
-                    'socket': None,
-                    'type': 'celeryd',
-                    'priority': 40,
-                    'stopasgroup': 'true',
-                    'killasgroup': 'true',
-                    'stopwaitsecs': conf.get('stopwaitsecs', None),
-                }
+                'command': celeryd_command,
+                'port': None,
+                'socket': None,
+                'type': 'celeryd',
+                'priority': 40,
+                'stopasgroup': 'true',
+                'killasgroup': 'true',
+                'stopwaitsecs': conf.get('stopwaitsecs', None),
+            }
             if conf.get("celerycam"):
                 celerycam_command_context = {
                     'loglevel': conf.get("loglevel"),
@@ -356,9 +367,11 @@ class Configuration(object):
                 }
         if site_dict.get("redis").get("enabled"):
             process_name = "%s_%s_redis" % (env_dict.get("user"), site)
-            redis_socket = posixpath.normpath(posixpath.join(env_dict.get("path"), "..", "tmp", process_name + ".sock" )) # Asserts pony project layout
+            redis_socket = posixpath.normpath(posixpath.join(env_dict.get("path"), "..", "tmp",
+                                                             process_name + ".sock"))  # Asserts pony project layout
             process_dict[process_name] = {
-                'command': "/usr/bin/redis-server %s" % posixpath.normpath(posixpath.join(env_dict.get('path'), '..', 'config', process_name + '.conf')),
+                'command': "/usr/bin/redis-server %s" % posixpath.normpath(
+                    posixpath.join(env_dict.get('path'), '..', 'config', process_name + '.conf')),
                 'port': None,
                 'socket': redis_socket,
                 'type': 'redis',
@@ -366,7 +379,7 @@ class Configuration(object):
             }
         if site_dict.get('processes'):
             processes = site_dict.get('processes')
-            for process, command in processes.iteritems():
+            for process, command in processes.items():
                 process_name = "%s_%s_process_%s" % (env_dict.get("user"), site, process)
                 process_dict[process_name] = {
                     'command': posixpath.join(env_dict.get("path"), command),
@@ -413,10 +426,9 @@ class Configuration(object):
             'bind_ip': env_dict.get('bind_ip', '*'),
             'static_error_pages': env_dict.get('static_error_pages', []),
             'big_body_endpoints': env_dict.get('big_body_endpoints', []),
-            'home': '/home/%s' %  env_dict.get("user"),
+            'home': '/home/%s' % env_dict.get("user"),
         }
         deployment_dict['logdir'] = env_dict.get("logdir") or os.path.join(deployment_dict['home'], 'log')
-
 
         if not env_dict.get("databases"):
             deployment_dict["databases"] = {
@@ -468,7 +480,8 @@ class Configuration(object):
         celery_dict = self.sites[site].get("celery")
 
         celery_dict["concurrency"] = env_dict.get("celery", {}).get("concurrency", celery_dict.get("concurrency"))
-        celery_dict["maxtasksperchild"] = env_dict.get("celery", {}).get("maxtasksperchild", celery_dict.get("maxtasksperchild"))
+        celery_dict["maxtasksperchild"] = env_dict.get("celery", {}).get("maxtasksperchild",
+                                                                         celery_dict.get("maxtasksperchild"))
 
         ##############
         # nginx dict #
@@ -477,7 +490,8 @@ class Configuration(object):
         nginx_dict = self.sites[site].get("nginx")
         nginx_dict["enabled"] = env_dict.get("nginx", {}).get("enabled", nginx_dict.get("enabled"))
         nginx_dict["location_settings"] = {
-            "client_max_body_size": env_dict.get("nginx", {}).get("client_max_body_size", nginx_dict.get("client_max_body_size")),
+            "client_max_body_size": env_dict.get("nginx", {}).get("client_max_body_size",
+                                                                  nginx_dict.get("client_max_body_size")),
         }
         nginx_dict["template"] = env_dict.get("nginx", {}).get("template", nginx_dict.get("template"))
 
@@ -502,22 +516,38 @@ class Configuration(object):
 
         supervisor_dict = self.sites[site].get("supervisor")
         supervisor_dict["template"] = env_dict.get("supervisor", {}).get("template", supervisor_dict.get("template"))
-        supervisor_dict["daemon_template"] = env_dict.get("supervisor", {}).get("daemon_template", supervisor_dict.get("daemon_template"))
-        supervisor_dict["group_template"] = env_dict.get("supervisor", {}).get("group_template", supervisor_dict.get("group_template"))
-        supervisor_dict["gunicorn_command_template"] = env_dict.get("supervisor", {}).get("gunicorn_command_template", supervisor_dict.get("gunicorn_command_template"))
-        supervisor_dict["celeryd_command_template"] = env_dict.get("supervisor", {}).get("celeryd_command_template", supervisor_dict.get("celeryd_command_template"))
-        supervisor_dict["celeryd_command_template"] = env_dict.get("supervisor", {}).get("celeryd_command_template", supervisor_dict.get("celeryd_command_template"))
-        supervisor_dict["supervisorctl_command"] = env_dict.get("supervisor", {}).get("supervisorctl_command", supervisor_dict.get("supervisorctl_command"))
-        supervisor_dict["supervisord_command"] = env_dict.get("supervisor", {}).get("supervisord_command", supervisor_dict.get("supervisord_command"))
-        supervisor_dict["use_global_supervisord"] = env_dict.get("supervisor", {}).get("use_global_supervisord", supervisor_dict.get("use_global_supervisord"))
+        supervisor_dict["daemon_template"] = env_dict.get("supervisor", {}).get("daemon_template",
+                                                                                supervisor_dict.get("daemon_template"))
+        supervisor_dict["group_template"] = env_dict.get("supervisor", {}).get("group_template",
+                                                                               supervisor_dict.get("group_template"))
+        supervisor_dict["gunicorn_command_template"] = env_dict.get("supervisor", {}).get("gunicorn_command_template",
+                                                                                          supervisor_dict.get(
+                                                                                              "gunicorn_command_template"))
+        supervisor_dict["celeryd_command_template"] = env_dict.get("supervisor", {}).get("celeryd_command_template",
+                                                                                         supervisor_dict.get(
+                                                                                             "celeryd_command_template"))
+        supervisor_dict["celeryd_command_template"] = env_dict.get("supervisor", {}).get("celeryd_command_template",
+                                                                                         supervisor_dict.get(
+                                                                                             "celeryd_command_template"))
+        supervisor_dict["supervisorctl_command"] = env_dict.get("supervisor", {}).get("supervisorctl_command",
+                                                                                      supervisor_dict.get(
+                                                                                          "supervisorctl_command"))
+        supervisor_dict["supervisord_command"] = env_dict.get("supervisor", {}).get("supervisord_command",
+                                                                                    supervisor_dict.get(
+                                                                                        "supervisord_command"))
+        supervisor_dict["use_global_supervisord"] = env_dict.get("supervisor", {}).get("use_global_supervisord",
+                                                                                       supervisor_dict.get(
+                                                                                           "use_global_supervisord"))
         if supervisor_dict["supervisorctl_command"] is None:
             if supervisor_dict["use_global_supervisord"]:
                 supervisor_dict["supervisorctl_command"] = 'sudo supervisorctl'
             else:
-                supervisor_dict["supervisorctl_command"] = 'supervisorctl --config={}../config/supervisord.conf'.format(deployment_dict['path'])
+                supervisor_dict["supervisorctl_command"] = 'supervisorctl --config={}../config/supervisord.conf'.format(
+                    deployment_dict['path'])
 
         if supervisor_dict["supervisord_command"] is None and not supervisor_dict["use_global_supervisord"]:
-            supervisor_dict["supervisord_command"] = 'supervisord -c {}../config/supervisord.conf'.format(deployment_dict['path'])
+            supervisor_dict["supervisord_command"] = 'supervisord -c {}../config/supervisord.conf'.format(
+                deployment_dict['path'])
 
         #################
         # newrelic dict #
@@ -528,11 +558,12 @@ class Configuration(object):
         newrelic_dict["config_file"] = env_dict.get("newrelic", {}).get("config_file", newrelic_dict.get("config_file"))
         if not newrelic_dict["config_file"].startswith('/'):
             newrelic_dict["config_file"] = posixpath.abspath(posixpath.join(
-                    deployment_dict["path"],
-                    newrelic_dict["config_file"],
-                ))
+                deployment_dict["path"],
+                newrelic_dict["config_file"],
+            ))
         self.sites[site]["environment"]["NEW_RELIC_CONFIG_FILE"] = newrelic_dict["config_file"]
-        newrelic_dict["environment_name"] = env_dict.get("newrelic", {}).get("environment_name", newrelic_dict.get("environment_name"))
+        newrelic_dict["environment_name"] = env_dict.get("newrelic", {}).get("environment_name",
+                                                                             newrelic_dict.get("environment_name"))
         if newrelic_dict["environment_name"]:
             self.sites[site]["environment"]["NEW_RELIC_ENVIRONMENT"] = newrelic_dict["environment_name"]
 
@@ -565,6 +596,7 @@ class Configuration(object):
         django_args = " ".join(site_dict.get("django").get("args", []))
         run('%s %s %s %s' % (site_dict['environment_export'], cmd, command, django_args))
 
+
 if not __name__ == '__main__':
     #: A shared instance of configuration, always to be used
     config = Configuration()
@@ -573,17 +605,20 @@ if not __name__ == '__main__':
 @task
 def check_config():
     for section in config_ini.config_parser.sections():
-        print "[%s]" % section
-        print config_ini.config_parser.items(section)
+        print("[%s]" % section)
+        print(config_ini.config_parser.items(section))
+
 
 @task
 def uname():
-    print env.host_string
+    print(env.host_string)
     run('uname -a')
+
 
 @task
 def ls():
     run('cd %(path)s;ls -lAF' % env)
+
 
 @task
 def ps():
@@ -592,6 +627,7 @@ def ps():
     """
     run('ps -f -u %(user)s | grep -v "ps -f" | grep -v sshd' % env)
 
+
 @task
 def download_media(to_dir="./tmp/media/", from_dir="../upload/media/"):
     """
@@ -599,25 +635,29 @@ def download_media(to_dir="./tmp/media/", from_dir="../upload/media/"):
 
     * Example: download_media:from_dir="py_src/project/media/"
     """
-    print "Downloading media from", env.host_string
+    print("Downloading media from", env.host_string)
     env.from_dir = from_dir
-    local('rsync -avz --no-links --progress --exclude=".svn" -e "ssh" %(user)s@%(host_string)s:"%(path)s/%(from_dir)s"' % env + " " +to_dir)
+    local(
+        'rsync -avz --no-links --progress --exclude=".svn" -e "ssh" %(user)s@%(host_string)s:"%(path)s/%(from_dir)s"' % env + " " + to_dir)
+
 
 @task
 def upload_media(from_dir="./tmp/media/", to_dir="../upload/media/"):
     """
     Uploads media from a local folder, default ./tmp/media -> ../uploads/
-    
+
     * Example: upload_media:to_dir="py_src/project/media/"
     """
-    print "Uploading media to", env.host_string
+    print("Uploading media to", env.host_string)
     env.to_dir = to_dir
-    local('rsync -avz --no-links --progress --exclude=".svn" '+ from_dir +' -e "ssh" %(user)s@%(host_string)s:"%(path)s/%(to_dir)s"' % env)
+    local(
+        'rsync -avz --no-links --progress --exclude=".svn" ' + from_dir + ' -e "ssh" %(user)s@%(host_string)s:"%(path)s/%(to_dir)s"' % env)
 
 
 @task
 def use_local_config_ini():
     env.use_local_config_ini = True
+
 
 @task
 def safe_put(*args, **kwargs):
@@ -640,10 +680,9 @@ def gulp_deploy(css_dir='private', *args, **kwargs):
     from .git import local_branch_is_dirty, local_branch_matches_remote
 
     if local_branch_is_dirty() or not local_branch_matches_remote():
-        print ("Please make sure that local branch is not dirty and "
-               "matches the remote (deployment) branch.")
+        print("Please make sure that local branch is not dirty and matches the remote (deployment) branch.")
     else:
-        print "Preparing files (CSS/JS)"
+        print("Preparing files (CSS/JS)")
         local('compass compile {}'.format(css_dir))
         # Replace compass with 'gulp' when front-end is ready
         upload_media('./static/css/', '../static/css/')

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    import io as StringIO
 import posixpath
 from fabric.decorators import task
 from fabric.api import run, env, put
@@ -14,7 +17,7 @@ def update_config_file(dryrun=False):
     for site, site_config in config.sites.items():
         redis_processes = [(x, site_config.processes[x]) for x in site_config.processes if site_config.processes[x]["type"] == "redis"]
         template_path = site_config['redis']['template']
-        print redis_processes
+        print(redis_processes)
         for process_name, process in redis_processes:
             working_directoy = posixpath.normpath(posixpath.join(env.path, '..', 'data', 'redis', process_name))
             log_directory = posixpath.normpath(posixpath.join(site_config['deployment']['logdir'], 'log', 'redis'))
@@ -31,8 +34,7 @@ def update_config_file(dryrun=False):
             path = posixpath.abspath(posixpath.join(site_config['deployment']['path'], '..', 'config', process_name + '.conf'))
             output = render_template(template_path, context_dict)
             if dryrun:
-                print path + ":"
-                print output
+                print(path + ":")
+                print(output)
             else:
                 put(StringIO.StringIO(output), path)
-

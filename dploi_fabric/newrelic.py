@@ -6,7 +6,7 @@ from functools import wraps
 from fabric.api import task, env, prompt
 from fabric.operations import run
 
-from toolbox import logger
+from .toolbox import logger
 
 
 logged_output = {'stdout': "", 'stderr': ""}
