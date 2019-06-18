@@ -16,9 +16,8 @@ def init():
     if files.exists(os.path.join(env.path, 'bin')):
         print("buildout environment exists already")
         return
-    upload_ssh_deploy_key()
     run('mkdir -p %(path)s' % env)
-    run('mkdir -p %(logdir)s' % env)
+    run('mkdir -p %(path)s../log' % env)
     run('mkdir -p %(path)s../tmp' % env)
     run('mkdir -p %(path)s../config' % env)
     if env.repo.startswith('git'):
@@ -38,7 +37,7 @@ def init():
         run(config.sites["main"]['supervisor']['supervisord_command'])
         supervisor_update_config_file(load_config=True)
 
-    if config.sites["main"]['nginx']['enabled'] == True:
+    if config.sites["main"]['nginx']['enabled'] is True:
         nginx_update_config_file()
 
     tool = config.sites['main'].get('checkout', {}).get('tool')
@@ -49,7 +48,6 @@ def init():
         from . import virtualenv
         virtualenv.create()
         django_utils.append_settings()
-        django_utils.manage("syncdb --all --noinput")
         django_utils.manage("migrate --fake")
     else:
         print("WARNING: Couldnt find [checkout] tool - please set it to either virtualenv or buildout in your config.ini")
