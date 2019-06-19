@@ -1,4 +1,11 @@
-{% if version == '3.1' %}
+{% if version == '4' %}
+{{ cmd }}
+events
+--workdir={{ path }}src
+--app={{ celery_app }}
+--frequency={{ frequency }}
+--loglevel={{ loglevel }}
+{% elif version == '3.1' %}
 {{ cmd }}
 events
 --workdir={{ path }}src
