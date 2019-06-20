@@ -49,6 +49,7 @@ class Configuration(object):
             'concurrency': 1,
             'maxtasksperchild': 500,
             'loglevel': 'WARNING',
+            'flower': False,
             'celerycam': False,
             'celerycam-frequency': 1.0,
             'extra_options': '',
@@ -91,6 +92,7 @@ class Configuration(object):
             'gunicorn_command_template': app_package_path('templates/supervisor/gunicorn_command'),
             'celeryd_command_template': app_package_path('templates/supervisor/celeryd_command'),
             'celerycam_command_template': app_package_path('templates/supervisor/celerycam_command'),
+            'flower_command_template': app_package_path('templates/supervisor/flower_command'),
             'supervisorctl_command': None,
             'supervisord_command': None,
             'use_global_supervisord': False,
@@ -363,6 +365,26 @@ class Configuration(object):
                     'port': None,
                     'socket': None,
                     'type': 'celerycam',
+                    'priority': 50,
+                }
+            if conf.get("flower"):
+                flower_command_context = {
+                    'path': env_dict.get("path"),
+                    'celery_app': conf.get("app"),
+                    'cmd': cmd,
+                }
+                flower_command_context.update(common_cmd_context)
+                flower_command_template_path = self.sites[site]['supervisor']['flower_command_template']
+                flower_command = render_template(
+                    flower_command_template_path,
+                    flower_command_context,
+                    strip_newlines=True,
+                )
+                process_dict["%s_%s_flower" % (env_dict.get("user"), site)] = {
+                    'command': flower_command,
+                    'port': None,
+                    'socket': None,
+                    'type': 'flower_command',
                     'priority': 50,
                 }
         if site_dict.get("redis").get("enabled"):

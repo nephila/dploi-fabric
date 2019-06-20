@@ -1,0 +1,5 @@
+{{ cmd }}
+flower
+--workdir={{ path }}src
+--app={{ celery_app }}
+--unix_socket={{ path }}../tmp/flower.sock

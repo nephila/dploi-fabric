@@ -99,7 +99,7 @@ Celery
 
 The ``[celery]`` section has some special configuration parameters:
 
- * ``version`` (default: empty): set the celery version. Other the value ``3.1`` is recognized and triggers the
+ * ``version`` (default: empty): set the celery version. Other the value ``3.1`` or ``4`` is recognized and triggers the
    usage of the ``celery`` command instead of the django-celery based ``manage.py celeryd``.
  * ``app`` (default: ``project``): the module that contains the ``celery.py`` (see the `celery documentation`_)
 

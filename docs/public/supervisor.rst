@@ -31,3 +31,4 @@ this site ``supervisor`` section:
 * ``gunicorn_command_template`` (default: bundled ``dploi_fabric/templates/supervisor/gunicorn_command``)
 * ``celeryd_command_template`` (default: bundled ``dploi_fabric/templates/supervisor/celeryd_command``)
 * ``celerycam_command_template`` (default: bundled ``dploi_fabric/templates/supervisor/celerycam_command``)
+* ``flower_command_template`` (default: bundled ``dploi_fabric/templates/supervisor/flower_command``)
