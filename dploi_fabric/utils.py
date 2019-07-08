@@ -645,7 +645,7 @@ def ls():
 @task
 def ps():
     """
-    show processes of this user
+    Show processes of this user
     """
     run('ps -f -u %(user)s | grep -v "ps -f" | grep -v sshd' % env)
 
@@ -684,7 +684,7 @@ def use_local_config_ini():
 @task
 def safe_put(*args, **kwargs):
     """
-    a version of put that makes sure the directory exists first.
+    A version of put that makes sure the directory exists first.
     :return:
     """
     if len(args) >= 2:

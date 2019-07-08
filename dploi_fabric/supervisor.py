@@ -33,7 +33,7 @@ def restart():
 @task
 def status():
     """
-    print status of the supervisor process
+    Print status of the supervisor process
 
     Note: "status" does not yet support the group syntax
     """

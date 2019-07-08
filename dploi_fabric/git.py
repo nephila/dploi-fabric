@@ -57,7 +57,7 @@ def status():
 @task
 def reset():
     """
-    discard all non-committed changes
+    Discard all non-committed changes
     """
     run("cd %(path)s; find . -iname '*.pyc' -delete" % env)
     run("cd %(path)s; git reset --hard HEAD" % env)

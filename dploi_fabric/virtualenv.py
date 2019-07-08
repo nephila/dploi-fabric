@@ -7,7 +7,7 @@ from .utils import config
 @task
 def update():
     """
-    updates a virtualenv (pip install requirements.txt)
+    Updates a virtualenv (pip install requirements.txt)
     """
     print("Updating virtualenv!")
     do_run('cd %(path)s; bin/pip install -r requirements.txt --upgrade --no-deps' % config.sites["main"].deployment)
@@ -17,10 +17,11 @@ def update():
 @task
 def create():
     """
-    creates a virtualenv and calls update
+    Creates a virtualenv and calls update
     """
-    print("Create virtualenv!")
+    print("Start creating virtualenv!")
     do_run('cd %(path)s; virtualenv . --system-site-packages --setuptools' % config.sites["main"].deployment)
+    print("Finished to create virtualenv!")
     update()
     # this is ugly. I know. But it seems that on first run, pip does not
     # install the correct version of packages that are pulled directly from
