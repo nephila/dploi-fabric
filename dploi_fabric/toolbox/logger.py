@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-class Logger():
+class Logger:
     """
-    Capture print statements and write them to a variable
+    Capture print(statements and write them to a variable)
     but still allow them to be printed on the screen.
     You can also redirect multiple streams into one Logger.
     """

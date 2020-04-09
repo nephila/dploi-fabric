@@ -1,18 +1,15 @@
-# -*- coding: utf-8 -*-
-import sys
 import subprocess
+import sys
 from functools import wraps
 
-from fabric.api import task, env, prompt
+from fabric.api import env, prompt, task
 from fabric.operations import run
-
 from toolbox import logger
 
+logged_output = {"stdout": "", "stderr": ""}
 
-logged_output = {'stdout': "", 'stderr': ""}
 
-
-class log_output():
+class log_output:
     def __init__(self):
         global logged_output
         self.stdout_logger = logger.Logger(sys.stdout)
@@ -26,8 +23,8 @@ class log_output():
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # TODO: Add exception handling?
-        logged_output['stdout'] += self.stdout_logger.get_log()
-        logged_output['stderr'] += self.stderr_logger.get_log()
+        logged_output["stdout"] += self.stdout_logger.get_log()
+        logged_output["stderr"] += self.stderr_logger.get_log()
 
 
 def register_deployment(func):
@@ -57,13 +54,24 @@ def register_deployment(func):
         commit_author_name = run(log_base + " --pretty=%aN")
 
         if hash_before and hash_before != commit_hash:
-            diff_url = "https://%s/compare/%s...%s" % (run("cd app && git config --get remote.origin.url").replace(
-                "git@", "", 1).replace(":", "/", 1).replace(".git", "", 1), hash_before, commit_hash)
+            diff_url = "https://%s/compare/%s...%s" % (
+                run("cd app && git config --get remote.origin.url")
+                .replace("git@", "", 1)
+                .replace(":", "/", 1)
+                .replace(".git", "", 1),
+                hash_before,
+                commit_hash,
+            )
             msg = "%s from %s (%s)" % (commit_message, commit_author_name, diff_url)
 
         else:
-            url = "https://%s/commit/%s" % (run("cd app && git config --get remote.origin.url").replace(
-                "git@", "", 1).replace(":", "/", 1).replace(".git", "", 1), commit_hash)
+            url = "https://%s/commit/%s" % (
+                run("cd app && git config --get remote.origin.url")
+                .replace("git@", "", 1)
+                .replace(":", "/", 1)
+                .replace(".git", "", 1),
+                commit_hash,
+            )
 
             if hash_before and hash_before == commit_hash:
                 msg = "No changes in the repository. %s" % url
@@ -71,13 +79,19 @@ def register_deployment(func):
             else:
                 msg = "No pre-pull commit hash provided. %s" % url
 
-        log = logged_output['stdout']
-        if logged_output['stderr']:
-            log += "\nErrors:\n%s" % str(logged_output['stderr'])
+        log = logged_output["stdout"]
+        if logged_output["stderr"]:
+            log += "\nErrors:\n%s" % str(logged_output["stderr"])
 
-        options = {'app_name': env['user'], 'user': user, 'description': msg, 'revision': commit_hash, 'changelog': log}
+        options = {
+            "app_name": env["user"],
+            "user": user,
+            "description": msg,
+            "revision": commit_hash,
+            "changelog": log,
+        }
 
-        cmd = 'curl -H "x-api-key:%s"' % env['newrelic']['deployment_tracking_apikey']
+        cmd = 'curl -H "x-api-key:%s"' % env["newrelic"]["deployment_tracking_apikey"]
 
         for key, val in options.items():
             cmd += ' --data-urlencode "deployment[%s]=%s"' % (key, val)
@@ -85,4 +99,5 @@ def register_deployment(func):
         cmd += " https://rpm.newrelic.com/deployments.xml"
         subprocess.call(cmd, shell=True)
         return __func_ret
+
     return with_logging
