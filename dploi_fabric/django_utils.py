@@ -19,9 +19,12 @@ def django_exec(dictionary={}, tool="buildout"):
     django_base = "."  # default to current dir
     if exists(config_file):
         output = StringIO()
+        print("START")
         get("%s" % config_file, output)
+        print("FETCHED")
         output.seek(0)
         config.readfp(output)
+        print("READ")
 
         try:
             tool = config.get("checkout", "tool")

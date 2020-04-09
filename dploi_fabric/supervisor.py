@@ -53,8 +53,7 @@ def add():
 def update():
     for site, site_config in config.sites.items():
         group_name = get_group_name(site, site_config)
-        for process_name, process_cmd in site_config.processes.items():
-            run("%s update %s:%s" % (site_config["supervisor"]["supervisorctl_command"], group_name, process_name))
+        run("%s update %s" % (site_config["supervisor"]["supervisorctl_command"], group_name))
 
 
 def get_group_name(site, site_config):

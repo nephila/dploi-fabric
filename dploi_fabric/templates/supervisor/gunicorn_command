@@ -1,15 +1,7 @@
-{% if version == '19' %}
 {{ cmd }}
-wsgi
+src.wsgi
 -w {{ workers }}
 --max-requests {{ maxrequests }}
 {% if timeout %} --timeout {{ timeout }}{% endif %}
 -b {{ bind }}
-{% else %}
-{{ django_cmd }}
-run_gunicorn {{ django_args }}
--w {{ workers }}
---max-requests {{ maxrequests }}
-{% if timeout %}--timeout {{ timeout }}{% endif %}
--b {{ bind }}
-{% endif %}
+--config {{ deployment.path }}../config/gunicorn.conf

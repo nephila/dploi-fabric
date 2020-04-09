@@ -17,7 +17,8 @@ def create():
     """
     creates a virtualenv and calls update
     """
-    do_run("cd %(path)s; virtualenv . --system-site-packages --setuptools" % config.sites["main"].deployment)
+    print(config.sites)
+    do_run("cd %(path)s; virtualenv . --python=%(python)s --setuptools" % config.sites["main"].deployment)
     update()
     # this is ugly. I know. But it seems that on first run, pip does not
     # install the correct version of packages that are pulled directly from

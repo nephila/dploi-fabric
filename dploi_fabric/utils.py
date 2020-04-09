@@ -379,6 +379,7 @@ class Configuration(object):
             "domains_redirect": env_dict.get("domains_redirect"),
             "url_redirect": env_dict.get("url_redirect"),
             "basic_auth": env_dict.get("basic_auth", False),
+            "python": env_dict.get("python", "/usr/bin/python3.5"),
             "basic_auth_path": os.path.join(env_dict.get("path"), env_dict.get("basic_auth_path", None) or ""),
             "ssl": env.get("ssl", False),
             "ssl_cert_path": os.path.join(env_dict.get("path"), env_dict.get("ssl_cert_path", None) or ""),
@@ -654,11 +655,11 @@ def safe_put(*args, **kwargs):
 
 
 @task
-def gulp_deploy(css_dir="private", *args, **kwargs):
+def gulp_deploy(force=True):
     # Import here to avoid circular references
     from .git import local_branch_is_dirty, local_branch_matches_remote
 
-    if local_branch_is_dirty() or not local_branch_matches_remote():
+    if (local_branch_is_dirty() or not local_branch_matches_remote()) and not force:
         print("Please make sure that local branch is not dirty and matches the remote (deployment) branch.")
     else:
         print("Preparing files (CSS/JS)")

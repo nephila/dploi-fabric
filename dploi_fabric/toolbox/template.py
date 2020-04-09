@@ -1,14 +1,23 @@
 import os
 
+import django
 import dploi_fabric
 from django.conf import settings
-from django.template import Template
-from django.template.context import Context
+from django.template import Context, Template
 
-settings.configure(DEBUG=True, TEMPLATE_DEBUG=True)
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [os.path.join(os.path.dirname(__file__), "templates")],
+        "OPTIONS": {"loaders": ["django.template.loaders.filesystem.Loader",],},
+    },
+]
+settings.configure(DEBUG=True, TEMPLATES=TEMPLATES)
+django.setup()
 
 
 def render_template(path, context, strip_newlines=False):
+
     if not isinstance(context, Context):
         context = Context(context)
     with open(path) as template_file:

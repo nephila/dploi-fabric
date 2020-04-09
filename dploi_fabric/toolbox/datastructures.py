@@ -1,7 +1,9 @@
-from configparser import NoOptionError, NoSectionError, SafeConfigParser
+from configparser import NoOptionError, NoSectionError, RawConfigParser
+
+_UNSET = object()
 
 
-class EnvConfigParser(SafeConfigParser):
+class EnvConfigParser(RawConfigParser):
     """ A config parser that can handle "namespaced" sections. Example:
 
     [base]
@@ -15,15 +17,15 @@ class EnvConfigParser(SafeConfigParser):
     def _concat(self, parent, child):
         return "%s:%s" % (parent, child)
 
-    def items(self, section, raw=False, vars=None, env=None):
+    def items(self, section=_UNSET, raw=False, vars=None, env=None):
         items = {}
         try:
-            items.update(dict(SafeConfigParser.items(self, section, raw, vars)))
+            items.update(dict(super().items(section, raw, vars)))
         except NoSectionError:
             pass
         if env:
             try:
-                env_items = dict(SafeConfigParser.items(self, self._concat(section, env), raw, vars))
+                env_items = dict(super().items(self._concat(section, env), raw, vars))
                 items.update(env_items)
             except NoSectionError:
                 pass
@@ -31,36 +33,32 @@ class EnvConfigParser(SafeConfigParser):
             raise NoSectionError(self._concat(section, env) if env else section)
         return tuple(items.items())
 
-    def get(self, section, option, raw=False, vars=None, env=None):
+    def get(self, section, option, *, raw=False, vars=None, fallback=_UNSET, env=None):
         if env and self.has_section(self._concat(section, env)):
             try:
-                return SafeConfigParser.get(self, self._concat(section, env), option, raw, vars)
+                return super().get(self._concat(section, env), option, raw=raw, vars=vars, fallback=fallback)
             except NoOptionError:
                 if not self.has_section(section):
                     raise
-        return SafeConfigParser.get(self, section, option, raw, vars)
+        return super().get(section, option, raw=raw, vars=vars, fallback=fallback)
 
     def _get(self, section, conv, option, env=None):
         return conv(self.get(section, option, env=env))
 
-    def getint(self, section, option, env=None):
+    def getint(self, section, option, *, raw=False, vars=None, fallback=_UNSET, env=None, **kwarg):
         return self._get(section, int, option, env)
 
-    def getfloat(self, section, option, env=None):
+    def getfloat(self, section, option, *, raw=False, vars=None, fallback=_UNSET, env=None, **kwargs):
         return self._get(section, float, option, env)
 
-    def getboolean(self, section, option, env=None):
+    def getboolean(self, section, option, *, raw=False, vars=None, fallback=_UNSET, env=None, **kwargs):
         v = self.get(section, option, env=env)
-        if v.lower() not in self._boolean_states:
-            raise ValueError("Not a boolean: %s" % v)
-        return self._boolean_states[v.lower()]
+        return self._convert_to_boolean(v)
 
     def has_section(self, section, env=None, strict=False):
         if not env:
-            return SafeConfigParser.has_section(self, section)
-        return (not strict and SafeConfigParser.has_section(self, section)) or SafeConfigParser.has_section(
-            self, self._concat(section, env)
-        )
+            return super().has_section(section)
+        return (not strict and super().has_section(section)) or super().has_section(self._concat(section, env))
 
     def section_namespaces(self, section):
         namespaces = []

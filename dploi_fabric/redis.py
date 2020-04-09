@@ -14,7 +14,6 @@ def update_config_file(dryrun=False):
             (x, site_config.processes[x]) for x in site_config.processes if site_config.processes[x]["type"] == "redis"
         ]
         template_path = site_config["redis"]["template"]
-        print(redis_processes)
         for process_name, process in redis_processes:
             working_directoy = posixpath.normpath(posixpath.join(env.path, "..", "data", "redis", process_name))
             log_directory = posixpath.normpath(posixpath.join(site_config["deployment"]["logdir"], "log", "redis"))
